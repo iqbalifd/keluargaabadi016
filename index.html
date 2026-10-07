@@ -296,20 +296,12 @@
         }
 
         // --- MENGATASI MULTI-PASANGAN (PERNIKAHAN KEDUA/SETERUSNYA) ---
-        // Jika seseorang memiliki istri/suami baru, kita buatkan node cabang tersendiri (virtual node) 
-        // sehingga anak-anak dari pasangan tersebut tetap terhubung secara logis ke jalur yang tepat.
         function preprocessFamilyData(dataList) {
             let expandedList = [];
             let syntheticIdCounter = 900000;
 
             dataList.forEach(node => {
                 expandedList.push({ ...node });
-
-                // Jika ada data pasangan kedua atau jika ingin menambah istri baru, 
-                // tips praktis: Di silsilah ini, jika kakek/paman punya istri lain, 
-                // Anda cukup menambahkan anggota baru sebagai "Anak" atau membuat entri dengan pasangan berbeda, 
-                // atau cukup input nama istri kedua di kolom pasangan jika hidup bersamaan. 
-                // Untuk pernikahan berurutan (cerai/wafat lalu menikah lagi), Anda bisa tambahkan anggota baru dengan nama yang sama tapi pasangannya berbeda.
             });
 
             return expandedList;
@@ -831,3 +823,16 @@
 
             } catch (error) {
                 if(cloudStatus) cloudStatus.textContent = 'Gagal Koneksi';
+            }
+        }
+
+        async function syncToCloud() {
+            if (!auth || !auth.currentUser || !docRef) return;
+            try { await setDoc(docRef, { nodes: familyData }); } 
+            catch (error) { showToast("Gagal menyimpan ke cloud."); }
+        }
+
+        window.onload = initCloud;
+    </script>
+</body>
+</html>
