@@ -33,11 +33,9 @@
 
         /* Style D3.js SVG */
         .link { fill: none; stroke: #cbd5e1; stroke-width: 3px; }
-        .node-rect { cursor: pointer; transition: all 0.3s ease; }
+        .node-rect { cursor: pointer; }
         .node-main { rx: 14; ry: 14; }
         .node-spouse { rx: 14; ry: 14; }
-        .node { transition: transform 0.2s ease; }
-        .node:hover { transform: scale(1.02); }
         .text-main-name { font-weight: bold; font-size: 13px; fill: #ffffff; text-anchor: middle; pointer-events: none; }
         .text-spouse-name { font-weight: bold; font-size: 13px; fill: #1f2937; text-anchor: middle; pointer-events: none; }
         .text-main-detail { font-size: 10px; fill: #dbeafe; text-anchor: middle; pointer-events: none; }
@@ -97,8 +95,19 @@
                 <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 tracking-tight">Silsilah</h1>
                 <span id="cloud-status" class="text-[10px] md:text-xs bg-yellow-100/80 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200/50 font-semibold shadow-sm backdrop-blur-sm">⏳ Sedang sync...</span>
             </div>
-            <p class="text-sm text-gray-500 mb-4 md:mb-6 leading-tight">Peta visual silsilah. Klik tombol di bawah untuk menambah leluhur pertama.</p>
+            <p class="text-sm text-gray-500 mb-4 leading-tight">Peta visual silsilah. Kelola dan telusuri garis keturunan.</p>
             
+            <!-- Fitur Pencarian Anggota Keluarga -->
+            <div class="mb-4 relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input type="text" id="search-input" oninput="handleSearch(this.value)" placeholder="Cari nama keluarga..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                <div id="search-results" class="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-30 hidden"></div>
+            </div>
+
             <div id="empty-state" class="text-center py-2 md:py-4">
                 <button onclick="openModal('root')" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl transition duration-300 shadow-lg shadow-blue-500/30 transform hover:-translate-y-0.5 text-sm md:text-base">
                     + Tambah Leluhur Utama
@@ -264,8 +273,7 @@
         }
 
         function getChildIndexLabel(nodeData) {
-            if (!nodeData.parentId) return ""; // Leluhur utama tidak ada nomor anak
-            // Cari semua saudara kandung yang memiliki parentId sama
+            if (!nodeData.parentId) return ""; 
             const siblings = familyData.filter(n => n.parentId === nodeData.parentId);
             const index = siblings.findIndex(n => n.id === nodeData.id);
             if (index !== -1) {
@@ -396,6 +404,47 @@
             }
         }
 
+        // --- FITUR PENCARIAN ---
+        window.handleSearch = function(query) {
+            const resultsBox = document.getElementById('search-results');
+            if (!query.trim()) {
+                resultsBox.classList.add('hidden');
+                resultsBox.innerHTML = '';
+                return;
+            }
+
+            const lowerQuery = query.toLowerCase();
+            const matches = familyData.filter(n => 
+                (n.name && n.name.toLowerCase().includes(lowerQuery)) || 
+                (n.spouseName && n.spouseName.toLowerCase().includes(lowerQuery))
+            );
+
+            if (matches.length === 0) {
+                resultsBox.innerHTML = '<div class="p-3 text-xs text-gray-400 text-center">Nama tidak ditemukan</div>';
+                resultsBox.classList.remove('hidden');
+                return;
+            }
+
+            let html = '';
+            matches.forEach(m => {
+                html += `<div onclick="focusNode('${m.id}')" class="p-2.5 hover:bg-blue-50 cursor-pointer border-b border-gray-100 text-xs transition-colors">
+                    <p class="font-bold text-blue-900">${m.name}</p>
+                    ${m.spouseName ? `<p class="text-gray-500 text-[10px]">Pasangan: ${m.spouseName}</p>` : ''}
+                </div>`;
+            });
+            resultsBox.innerHTML = html;
+            resultsBox.classList.remove('hidden');
+        };
+
+        window.focusNode = function(id) {
+            const nodeData = familyData.find(n => n.id === id);
+            if (nodeData) {
+                selectNode(nodeData);
+                document.getElementById('search-results').classList.add('hidden');
+                document.getElementById('search-input').value = '';
+            }
+        };
+
         // --- UI INTERAKSI PANEL MOBILE (SWIPE) ---
         let isMobilePanelOpen = true;
         const uiPanel = document.getElementById('ui-panel');
@@ -499,7 +548,7 @@
                     const cw = document.getElementById('tree-container').clientWidth;
                     const ch = document.getElementById('tree-container').clientHeight;
                     const yOffset = window.innerWidth < 768 ? ch * 0.25 : ch / 2;
-                    svg.transition().duration(750).call(zoom.transform, d3.zoomIdentity.translate(cw / 2 - targetNode.x, yOffset - targetNode.y).scale(1));
+                    svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity.translate(cw / 2 - targetNode.x, yOffset - targetNode.y).scale(1));
                 }
             } catch (e) {}
         }
@@ -598,7 +647,7 @@
             const cw = document.getElementById('tree-container').clientWidth;
             const ch = document.getElementById('tree-container').clientHeight;
             const yOffset = window.innerWidth < 768 ? ch * 0.15 : 100;
-            svg.transition().duration(750).call(zoom.transform, d3.zoomIdentity.translate(cw / 2, yOffset).scale(1));
+            svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity.translate(cw / 2, yOffset).scale(1));
         }
         window.resetView = resetView;
 
@@ -697,12 +746,6 @@
             }
         }
 
-        async function syncToCard() {
-            if (!auth || !auth.currentUser || !docRef) return;
-            try { await setDoc(docRef, { nodes: familyData }); } 
-            catch (error) { showToast("Gagal menyimpan ke cloud."); }
-        }
-        
         async function syncToCloud() {
             if (!auth || !auth.currentUser || !docRef) return;
             try { await setDoc(docRef, { nodes: familyData }); } 
