@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Silsilah Keluarga Abadi 016</title>
+    <title>Aplikasi Silsilah Keluarga</title>
     <!-- Memuat Tailwind CSS untuk styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Memuat D3.js untuk visualisasi grafik pohon -->
@@ -92,7 +92,7 @@
 
         <div class="overflow-y-auto flex-1" id="panel-content">
             <div class="flex items-center justify-between mb-1 md:mb-2">
-                <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 tracking-tight">Keluarga Abadi 016</h1>
+                <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 tracking-tight">Silsilah</h1>
                 <span id="cloud-status" class="text-[10px] md:text-xs bg-green-100/80 text-green-700 px-2 py-0.5 rounded-full border border-green-200/50 font-semibold shadow-sm backdrop-blur-sm">Cloud Aktif ☁️</span>
             </div>
             <p class="text-sm text-gray-500 mb-4 leading-tight">Peta visual silsilah keluarga besar.</p>
@@ -202,6 +202,13 @@
                         <!-- Diisi dinamis via JS -->
                     </select>
                 </div>
+
+                <!-- Pengaturan Urutan Anak (Hanya muncul saat Edit Anak) -->
+                <div id="edit-sibling-section" class="mb-5 bg-amber-50 p-4 rounded-xl border border-amber-200 shadow-sm" style="display: none;">
+                    <label class="block text-amber-900 text-xs font-bold mb-2 uppercase tracking-wider" for="editSiblingPosition">Ubah Urutan Anak ke-:</label>
+                    <input class="shadow-sm appearance-none border border-amber-300 rounded-lg w-full py-2.5 px-3 text-amber-900 bg-white leading-tight focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-xs font-semibold" id="editSiblingPosition" type="number" min="1" placeholder="Misal: 1, 2, 3">
+                    <p class="text-[10px] text-amber-700 mt-1">Mengubah posisi urutan tampil di antara saudara kandung.</p>
+                </div>
                 
                 <div id="main-person-section" class="bg-gradient-to-br from-blue-50 to-white p-4 rounded-xl border border-blue-100 mb-5 shadow-sm">
                     <h3 id="main-section-title" class="text-xs font-bold text-blue-600 mb-3 uppercase tracking-wider">Data Garis Keturunan Utama</h3>
@@ -260,9 +267,9 @@
         let familyData = []; 
         let nextId = 1; 
         let selectedNodeId = null; 
-        let activeSpouseIndices = {}; // Menyimpan indeks pasangan aktif per node ID { nodeId: spouseIndex }
+        let activeSpouseIndices = {}; 
         let isolatedParentId = null; 
-        let isolatedSpouseIndex = null; // Menyimpan indeks pasangan yang sedang di-isolasi (filter)
+        let isolatedSpouseIndex = null; 
 
         // --- KONFIGURASI VISUAL D3 ---
         const container = document.getElementById('tree-container');
@@ -704,6 +711,7 @@
             const mainSection = document.getElementById('main-person-section');
             const spouseSection = document.getElementById('spouse-section');
             const childSpouseSection = document.getElementById('child-spouse-section');
+            const editSiblingSection = document.getElementById('edit-sibling-section');
             const nameInput = document.getElementById('name');
             const spouseNameInput = document.getElementById('spouseName');
 
@@ -712,6 +720,7 @@
                 mainSection.style.display = 'block';
                 spouseSection.style.display = 'block';
                 childSpouseSection.style.display = 'none';
+                editSiblingSection.style.display = 'none';
                 nameInput.setAttribute('required', 'true');
                 spouseNameInput.removeAttribute('required');
             } else if (action === 'child') {
@@ -719,12 +728,13 @@
                 title.textContent = `Tambah Anak dari ${parentNode.name}`;
                 mainSection.style.display = 'block';
                 spouseSection.style.display = 'block';
+                childSpouseSection.style.display = 'block';
+                editSiblingSection.style.display = 'none';
                 nameInput.setAttribute('required', 'true');
                 spouseNameInput.removeAttribute('required');
 
                 const childSpouseSelect = document.getElementById('childSpouseIndex');
                 if (parentNode && parentNode.spouses && parentNode.spouses.length > 0) {
-                    childSpouseSection.style.display = 'block';
                     childSpouseSelect.innerHTML = '';
                     parentNode.spouses.forEach((sp, idx) => {
                         const opt = document.createElement('option');
@@ -743,6 +753,7 @@
                 mainSection.style.display = 'none'; 
                 spouseSection.style.display = 'block';
                 childSpouseSection.style.display = 'none';
+                editSiblingSection.style.display = 'none';
                 nameInput.removeAttribute('required');
                 spouseNameInput.setAttribute('required', 'true');
             } else if (action === 'edit') {
@@ -758,6 +769,17 @@
                 document.getElementById('mainAlm').checked = !!node.mainAlm;
                 document.getElementById('birthYear').value = node.birthYear || '';
                 
+                // Jika node ini adalah anak (punya parentId), tampilkan opsi pengubahan urutan anak ke-
+                if (node.parentId) {
+                    editSiblingSection.style.display = 'block';
+                    const siblings = familyData.filter(n => n.parentId === node.parentId);
+                    const currentIdx = siblings.findIndex(n => n.id === node.id);
+                    document.getElementById('editSiblingPosition').value = currentIdx !== -1 ? currentIdx + 1 : 1;
+                    document.getElementById('editSiblingPosition').max = siblings.length;
+                } else {
+                    editSiblingSection.style.display = 'none';
+                }
+
                 const activeIdx = activeSpouseIndices[node.id] || 0;
                 const activeSpouse = node.spouses && node.spouses[activeIdx] ? node.spouses[activeIdx] : {};
                 spouseNameInput.value = activeSpouse.name || '';
@@ -844,6 +866,36 @@
                         familyData[nodeIndex].spouses.splice(activeIdx, 1);
                         activeSpouseIndices[selectedNodeId] = 0;
                     }
+
+                    // Jika node ini anak, cek apakah posisi urutan saudara ingin diubah
+                    const node = familyData[nodeIndex];
+                    if (node.parentId) {
+                        const newPosInput = document.getElementById('editSiblingPosition').value;
+                        if (newPosInput) {
+                            const targetPosition = parseInt(newPosInput) - 1; // Konversi ke index 0-based
+                            // Ambil seluruh saudara kandung beserta node ini dari array utama
+                            let siblings = familyData.filter(n => n.parentId === node.parentId);
+                            const oldIndex = siblings.findIndex(n => n.id === node.id);
+                            
+                            if (oldIndex !== -1 && targetPosition >= 0 && targetPosition < siblings.length && oldIndex !== targetPosition) {
+                                // Pindahkan posisi item di dalam array `siblings`
+                                const [movedItem] = siblings.splice(oldIndex, 1);
+                                siblings.splice(targetPosition, 0, movedItem);
+
+                                // Susun ulang urutan elemen dalam `familyData` secara keseluruhan agar urutannya terupdate
+                                // Kumpulkan semua ID selain saudara-saudara ini, lalu sisipkan kembali urutan saudara yang baru
+                                const siblingIds = siblings.map(s => s.id);
+                                let otherData = familyData.filter(n => n.parentId !== node.parentId);
+                                
+                                // Cari posisi penyisipan yang tepat di dalam array familyData berdasarkan parentId
+                                // Cara paling aman adalah merekonstruksi array dengan menempatkan saudara-saudara sesuai urutan baru
+                                familyData = otherData;
+                                // Masukkan kembali saudara-saudara dengan urutan baru tepat setelah parent-nya atau di posisi relatifnya
+                                familyData.push(...siblings); 
+                            }
+                        }
+                    }
+
                     selectNode(familyData[nodeIndex]); 
                 }
             }
