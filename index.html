@@ -128,12 +128,12 @@
             <div id="selected-info" class="hidden mt-2 pt-4 border-t-2 border-gray-200">
                 <h2 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-3">Anggota Terpilih</h2>
                 
-                <!-- Kotak Anggota Utama -->
-                <div class="bg-blue-900 text-white p-4.5 rounded-2xl mb-3 shadow-md border-2 border-blue-800">
-                    <p class="text-xs text-blue-200 font-bold tracking-wider mb-0.5">GARIS KETURUNAN UTAMA</p>
-                    <p id="info-name" class="font-black text-xl text-white">-</p>
-                    <p id="info-detail" class="text-sm text-blue-100 mt-1 font-medium">-</p>
-                </div>
+			<!-- Kotak Anggota Utama (Diperbaiki agar tidak mepet) -->
+			<div class="bg-blue-900 text-white p-5 rounded-2xl mb-3 shadow-md border-2 border-blue-800 space-y-2">
+			<p class="text-xs text-blue-200 font-bold tracking-wider">GARIS KETURUNAN UTAMA</p>
+			<p id="info-name" class="font-black text-xl text-white leading-snug">-</p>
+			<p id="info-detail" class="text-sm text-blue-100 font-medium leading-relaxed pt-1">-</p>
+			</div>
 
                 <!-- Bagian Pilihan Pasangan (Menggantikan Dropdown agar tidak bikin pusing) -->
                 <div id="spouse-container-box" class="mb-3" style="display: none;">
@@ -161,7 +161,7 @@
                     </button>
                     <button onclick="openModal('child')" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white text-base font-bold py-4 px-4 rounded-2xl transition duration-300 shadow-lg flex items-center justify-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
-                        + Tambah Anak
+                        Tambah Anak
                     </button>
                     <div class="grid grid-cols-2 gap-3 pt-1">
                         <button onclick="openModal('edit')" class="bg-white hover:bg-gray-100 border-2 border-gray-300 text-gray-800 text-base font-bold py-3 px-3 rounded-2xl transition shadow-sm">Ubah Data</button>
