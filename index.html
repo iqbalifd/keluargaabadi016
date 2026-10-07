@@ -172,7 +172,7 @@
                     
                     <div class="mb-3 flex items-center gap-2 bg-white p-2.5 rounded-lg border border-gray-200">
                         <input type="checkbox" id="mainAlm" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300">
-                        <label for="mainAlm" class="text-sm text-gray-700 font-medium cursor-pointer">Sudah Almarhum / Almarhumah</label>
+                        <label for="mainAlm" class="text-sm text-gray-700 font-medium cursor-pointer">Almarhum / Almarhumah</label>
                     </div>
 
                     <div>
@@ -190,7 +190,7 @@
                     
                     <div class="mb-3 flex items-center gap-2 bg-white p-2.5 rounded-lg border border-gray-200">
                         <input type="checkbox" id="spouseAlm" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300">
-                        <label for="spouseAlm" class="text-sm text-gray-700 font-medium cursor-pointer">Pasangan Sudah Almarhum / Almarhumah</label>
+                        <label for="spouseAlm" class="text-sm text-gray-700 font-medium cursor-pointer">Pasangan Almarhum / Almarhumah</label>
                     </div>
 
                     <div>
@@ -256,11 +256,22 @@
             .nodeSize([baseRectWidth * 2 + 80, rectHeight + 90])
             .separation((a, b) => a.parent == b.parent ? 1 : 1.1);
 
-        // --- FUNGSI FORMAT NAMA & STATUS ---
+        // --- FUNGSI UKURAN KOTAK & NOMOR URUT ---
         function calculateBoxWidth(name) {
             if (!name) return baseRectWidth;
             const approxWidth = name.length * 8 + 40;
             return Math.max(baseRectWidth, approxWidth);
+        }
+
+        function getChildIndexLabel(nodeData) {
+            if (!nodeData.parentId) return ""; // Leluhur utama tidak ada nomor anak
+            // Cari semua saudara kandung yang memiliki parentId sama
+            const siblings = familyData.filter(n => n.parentId === nodeData.parentId);
+            const index = siblings.findIndex(n => n.id === nodeData.id);
+            if (index !== -1) {
+                return `Anak ke-${index + 1}`;
+            }
+            return "";
         }
 
         // --- RENDER POHON SILSILAH ---
@@ -320,25 +331,25 @@
                         .attr("stroke", isSelected ? "#ffffff" : "rgba(255,255,255,0.3)")
                         .attr("stroke-width", isSelected ? "3px" : "1px");
 
-                    // Teks Nama Utama
+                    // Teks Nama Utama (Di atas)
                     group.append("text")
                         .attr("class", "text-main-name")
                         .attr("x", mainX + (mainWidth/2))
-                        .attr("y", -10)
+                        .attr("y", -12)
                         .text(d.data.name || "");
 
-                    // Teks Keterangan di bawah Nama (Alm & Tahun Lahir)
-                    let mainDetail = "";
-                    if (d.data.mainAlm) mainDetail += "Almarhum(ah)";
-                    if (d.data.birthYear) {
-                        mainDetail += mainDetail ? ` • ${d.data.birthYear}` : `Lahir: ${d.data.birthYear}`;
-                    }
+                    // Keterangan di bawah Nama (Nomor Anak, Almarhum, Tahun Lahir)
+                    let details = [];
+                    const childNumLabel = getChildIndexLabel(d.data);
+                    if (childNumLabel) details.push(childNumLabel);
+                    if (d.data.mainAlm) details.push("Almarhum(ah)");
+                    if (d.data.birthYear) details.push(d.data.birthYear);
 
                     group.append("text")
                         .attr("class", "text-main-detail")
                         .attr("x", mainX + (mainWidth/2))
-                        .attr("y", 10)
-                        .text(mainDetail);
+                        .attr("y", 8)
+                        .text(details.join(" • "));
 
                     // KOTAK PASANGAN (PUTIH)
                     if (hasSpouse) {
@@ -365,20 +376,18 @@
                         group.append("text")
                             .attr("class", "text-spouse-name")
                             .attr("x", spouseX + (spouseWidth/2))
-                            .attr("y", -10)
+                            .attr("y", -12)
                             .text(d.data.spouseName || "");
 
-                        let spouseDetail = "";
-                        if (d.data.spouseAlm) spouseDetail += "Almarhum(ah)";
-                        if (d.data.spouseBirthYear) {
-                            spouseDetail += spouseDetail ? ` • ${d.data.spouseBirthYear}` : `Lahir: ${d.data.spouseBirthYear}`;
-                        }
+                        let spouseDetails = [];
+                        if (d.data.spouseAlm) spouseDetails.push("Almarhum(ah)");
+                        if (d.data.spouseBirthYear) spouseDetails.push(d.data.spouseBirthYear);
 
                         group.append("text")
                             .attr("class", "text-spouse-detail")
                             .attr("x", spouseX + (spouseWidth/2))
-                            .attr("y", 10)
-                            .text(spouseDetail);
+                            .attr("y", 8)
+                            .text(spouseDetails.join(" • "));
                     }
                 });
 
@@ -461,7 +470,10 @@
             document.getElementById('selected-info').classList.remove('hidden');
             
             let mainTxt = data.name;
-            if(data.mainAlm) mainTxt += " (Almarhum/ah)";
+            const childNum = getChildIndexLabel(data);
+            if (childNum) mainTxt += ` (${childNum})`;
+            if (data.mainAlm) mainTxt += " • Almarhum(ah)";
+            
             document.getElementById('info-name').textContent = mainTxt;
             document.getElementById('info-detail').textContent = data.birthYear ? `Tahun Lahir: ${data.birthYear}` : 'Tahun lahir tidak diketahui';
             
@@ -469,7 +481,7 @@
             if (data.spouseName) {
                 spouseBox.style.display = 'block';
                 let spouseTxt = data.spouseName;
-                if(data.spouseAlm) spouseTxt += " (Almarhum/ah)";
+                if(data.spouseAlm) spouseTxt += " • Almarhum(ah)";
                 document.getElementById('info-spouse-name').textContent = spouseTxt;
                 document.getElementById('info-spouse-detail').textContent = data.spouseBirthYear ? `Tahun Lahir: ${data.spouseBirthYear}` : 'Tahun lahir tidak diketahui';
             } else {
@@ -685,6 +697,12 @@
             }
         }
 
+        async function syncToCard() {
+            if (!auth || !auth.currentUser || !docRef) return;
+            try { await setDoc(docRef, { nodes: familyData }); } 
+            catch (error) { showToast("Gagal menyimpan ke cloud."); }
+        }
+        
         async function syncToCloud() {
             if (!auth || !auth.currentUser || !docRef) return;
             try { await setDoc(docRef, { nodes: familyData }); } 
