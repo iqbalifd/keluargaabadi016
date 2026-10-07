@@ -104,7 +104,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
-                <input type="text" id="search-input" oninput="handleSearch(this.value)" placeholder="Cari nama keluarga..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                <input type="text" id="search-input" oninput="handleSearch(this.value)" placeholder="Cari nama atau tahun..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                 <div id="search-results" class="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-30 hidden"></div>
             </div>
 
@@ -262,6 +262,7 @@
         let selectedNodeId = null; 
         let activeSpouseIndices = {}; // Menyimpan indeks pasangan aktif per node ID { nodeId: spouseIndex }
         let isolatedParentId = null; 
+        let isolatedSpouseIndex = null; // Menyimpan indeks pasangan yang sedang di-isolasi (filter)
 
         // --- KONFIGURASI VISUAL D3 ---
         const container = document.getElementById('tree-container');
@@ -314,7 +315,6 @@
                 label = `Anak ke-${index + 1}`;
             }
             
-            // Tambahkan keterangan dari pasangan ke berapa jika orang tua memiliki lebih dari 1 pasangan
             if (nodeData.parentSpouseIndex !== undefined && nodeData.parentSpouseIndex !== null) {
                 label += ` (Istri ${nodeData.parentSpouseIndex + 1})`;
             }
@@ -336,15 +336,24 @@
             try {
                 let activeData = familyData;
                 if (isolatedParentId) {
-                    const getSubtreeIds = (parentId) => {
+                    const getSubtreeIds = (parentId, targetSpouseIdx) => {
                         let ids = [parentId];
-                        const children = familyData.filter(n => n.parentId === parentId);
+                        const children = familyData.filter(n => {
+                            if (n.parentId !== parentId) return false;
+                            if (parentId === isolatedParentId && targetSpouseIdx !== null && targetSpouseIdx !== undefined) {
+                                const sIdx = n.parentSpouseIndex !== undefined ? n.parentSpouseIndex : 0;
+                                return sIdx === targetSpouseIdx;
+                            }
+                            return true;
+                        });
+
                         for (const child of children) {
-                            ids = ids.concat(getSubtreeIds(child.id));
+                            ids = ids.concat(getSubtreeIds(child.id, null));
                         }
                         return ids;
                     };
-                    const validIds = getSubtreeIds(isolatedParentId);
+
+                    const validIds = getSubtreeIds(isolatedParentId, isolatedSpouseIndex);
                     activeData = familyData.filter(n => validIds.includes(n.id)).map(n => {
                         if (n.id === isolatedParentId) {
                             return { ...n, parentId: null }; 
@@ -470,8 +479,14 @@
             if (!node) return;
 
             isolatedParentId = node.id;
+            isolatedSpouseIndex = activeSpouseIndices[node.id] || 0; 
+            
+            const spouses = node.spouses || [];
+            const activeSpouseObj = spouses[isolatedSpouseIndex];
+            const spouseNameDesc = activeSpouseObj && activeSpouseObj.name ? ` & ${activeSpouseObj.name}` : '';
+
             document.getElementById('filter-banner').classList.remove('hidden');
-            document.getElementById('filter-banner-text').textContent = `Keluarga ${node.name} & Seluruh Keturunannya`;
+            document.getElementById('filter-banner-text').textContent = `Keluarga ${node.name}${spouseNameDesc} & Keturunannya`;
             
             updateTree();
             resetView();
@@ -480,6 +495,7 @@
 
         window.resetFamilyFilter = function() {
             isolatedParentId = null;
+            isolatedSpouseIndex = null;
             document.getElementById('filter-banner').classList.add('hidden');
             updateTree();
             resetView();
@@ -497,20 +513,31 @@
             const lowerQuery = query.toLowerCase();
             const matches = familyData.filter(n => {
                 if (n.name && n.name.toLowerCase().includes(lowerQuery)) return true;
-                if (n.spouses && n.spouses.some(s => s.name && s.name.toLowerCase().includes(lowerQuery))) return true;
+                if (n.birthYear && n.birthYear.toString().includes(lowerQuery)) return true;
+                if (n.spouses && n.spouses.some(s => 
+                    (s.name && s.name.toLowerCase().includes(lowerQuery)) || 
+                    (s.spouseBirthYear && s.spouseBirthYear.toString().includes(lowerQuery))
+                )) return true;
                 return false;
             });
 
             if (matches.length === 0) {
-                resultsBox.innerHTML = '<div class="p-3 text-xs text-gray-400 text-center">Nama tidak ditemukan</div>';
+                resultsBox.innerHTML = '<div class="p-3 text-xs text-gray-400 text-center">Nama atau tahun tidak ditemukan</div>';
                 resultsBox.classList.remove('hidden');
                 return;
             }
 
             let html = '';
             matches.forEach(m => {
+                let spouseSummary = '';
+                if (m.spouses && m.spouses.length > 0) {
+                    const spouseNames = m.spouses.map(s => s.name).filter(Boolean).join(', ');
+                    if (spouseNames) spouseSummary = ` • Pasangan: ${spouseNames}`;
+                }
+
                 html += `<div onclick="focusNode('${m.id}')" class="p-2.5 hover:bg-blue-50 cursor-pointer border-b border-gray-100 text-xs transition-colors">
-                    <p class="font-bold text-blue-900">${m.name}</p>
+                    <p class="font-bold text-blue-900">${m.name} ${m.birthYear ? '(' + m.birthYear + ')' : ''}</p>
+                    <p class="text-[10px] text-gray-500">${spouseSummary}</p>
                 </div>`;
             });
             resultsBox.innerHTML = html;
@@ -523,6 +550,21 @@
                 selectNode(nodeData);
                 document.getElementById('search-results').classList.add('hidden');
                 document.getElementById('search-input').value = '';
+
+                const nodeGroup = d3.selectAll(".node").filter(d => d.data.id === id);
+                if (!nodeGroup.empty()) {
+                    const bound = nodeGroup.node().getBoundingClientRect();
+                    const cw = container.clientWidth;
+                    const ch = container.clientHeight;
+                    const currentTransform = d3.zoomTransform(svg.node());
+                    const targetX = currentTransform.x + (cw / 2) - (bound.left + bound.width / 2);
+                    const targetY = currentTransform.y + (ch / 2) - (bound.top + bound.height / 2);
+                    
+                    svg.transition().duration(500).call(
+                        zoom.transform,
+                        d3.zoomIdentity.translate(targetX, targetY).scale(currentTransform.k)
+                    );
+                }
             }
         };
 
@@ -605,7 +647,6 @@
             document.getElementById('info-name').textContent = mainTxt;
             document.getElementById('info-detail').textContent = data.birthYear ? `Tahun Lahir: ${data.birthYear}` : 'Tahun lahir tidak diketahui';
             
-            // Setup dropdown pilihan pasangan
             const selector = document.getElementById('spouse-selector');
             selector.innerHTML = '';
             const spouses = data.spouses || [];
@@ -681,7 +722,6 @@
                 nameInput.setAttribute('required', 'true');
                 spouseNameInput.removeAttribute('required');
 
-                // Cek apakah orang tua memiliki daftar pasangan untuk opsi pilihan anak
                 const childSpouseSelect = document.getElementById('childSpouseIndex');
                 if (parentNode && parentNode.spouses && parentNode.spouses.length > 0) {
                     childSpouseSection.style.display = 'block';
@@ -962,5 +1002,4 @@
         window.onload = initCloud;
     </script>
 </body>
-</html>
 </html>
