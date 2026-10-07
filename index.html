@@ -205,9 +205,9 @@
 
                 <!-- Pengaturan Urutan Anak (Hanya muncul saat Edit Anak) -->
                 <div id="edit-sibling-section" class="mb-5 bg-amber-50 p-4 rounded-xl border border-amber-200 shadow-sm" style="display: none;">
-                    <label class="block text-amber-900 text-xs font-bold mb-2 uppercase tracking-wider" for="editSiblingPosition">Ubah Urutan Anak ke-:</label>
+                    <label class="block text-amber-900 text-xs font-bold mb-2 uppercase tracking-wider" for="editSiblingPosition">Ubah Urutan Anak ke- (dari Istri Terkait):</label>
                     <input class="shadow-sm appearance-none border border-amber-300 rounded-lg w-full py-2.5 px-3 text-amber-900 bg-white leading-tight focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-xs font-semibold" id="editSiblingPosition" type="number" min="1" placeholder="Misal: 1, 2, 3">
-                    <p class="text-[10px] text-amber-700 mt-1">Mengubah posisi urutan tampil di antara saudara kandung.</p>
+                    <p class="text-[10px] text-amber-700 mt-1">Mengubah posisi urutan di antara saudara kandung dari istri yang sama.</p>
                 </div>
                 
                 <div id="main-person-section" class="bg-gradient-to-br from-blue-50 to-white p-4 rounded-xl border border-blue-100 mb-5 shadow-sm">
@@ -312,18 +312,25 @@
             return Math.max(baseRectWidth, approxWidth);
         }
 
+        // --- DIPERBAIKI: Hitung nomor urut anak secara spesifik per istri ---
         function getChildIndexLabel(nodeData) {
             if (!nodeData.parentId) return ""; 
-            const siblings = familyData.filter(n => n.parentId === nodeData.parentId);
-            const index = siblings.findIndex(n => n.id === nodeData.id);
+            const mySpouseIdx = nodeData.parentSpouseIndex !== undefined ? nodeData.parentSpouseIndex : 0;
+            
+            // Filter anak-anak yang hanya memiliki parentId DAN parentSpouseIndex yang sama
+            const sameMotherSiblings = familyData.filter(n => {
+                if (n.parentId !== nodeData.parentId) return false;
+                const sIdx = n.parentSpouseIndex !== undefined ? n.parentSpouseIndex : 0;
+                return sIdx === mySpouseIdx;
+            });
+
+            const index = sameMotherSiblings.findIndex(n => n.id === nodeData.id);
             
             let label = "";
             if (index !== -1) {
-                label = `Anak ke-${index + 1}`;
-            }
-            
-            if (nodeData.parentSpouseIndex !== undefined && nodeData.parentSpouseIndex !== null) {
-                label += ` (Istri ${nodeData.parentSpouseIndex + 1})`;
+                label = `Anak ke-${index + 1} dari Istri ${mySpouseIdx + 1}`;
+            } else {
+                label = `Istri ${mySpouseIdx + 1}`;
             }
             return label;
         }
@@ -769,13 +776,17 @@
                 document.getElementById('mainAlm').checked = !!node.mainAlm;
                 document.getElementById('birthYear').value = node.birthYear || '';
                 
-                // Jika node ini adalah anak (punya parentId), tampilkan opsi pengubahan urutan anak ke-
                 if (node.parentId) {
                     editSiblingSection.style.display = 'block';
-                    const siblings = familyData.filter(n => n.parentId === node.parentId);
-                    const currentIdx = siblings.findIndex(n => n.id === node.id);
+                    const mySpouseIdx = node.parentSpouseIndex !== undefined ? node.parentSpouseIndex : 0;
+                    const sameMotherSiblings = familyData.filter(n => {
+                        if (n.parentId !== node.parentId) return false;
+                        const sIdx = n.parentSpouseIndex !== undefined ? n.parentSpouseIndex : 0;
+                        return sIdx === mySpouseIdx;
+                    });
+                    const currentIdx = sameMotherSiblings.findIndex(n => n.id === node.id);
                     document.getElementById('editSiblingPosition').value = currentIdx !== -1 ? currentIdx + 1 : 1;
-                    document.getElementById('editSiblingPosition').max = siblings.length;
+                    document.getElementById('editSiblingPosition').max = sameMotherSiblings.length;
                 } else {
                     editSiblingSection.style.display = 'none';
                 }
@@ -867,31 +878,35 @@
                         activeSpouseIndices[selectedNodeId] = 0;
                     }
 
-                    // Jika node ini anak, cek apakah posisi urutan saudara ingin diubah
                     const node = familyData[nodeIndex];
                     if (node.parentId) {
                         const newPosInput = document.getElementById('editSiblingPosition').value;
                         if (newPosInput) {
-                            const targetPosition = parseInt(newPosInput) - 1; // Konversi ke index 0-based
-                            // Ambil seluruh saudara kandung beserta node ini dari array utama
-                            let siblings = familyData.filter(n => n.parentId === node.parentId);
-                            const oldIndex = siblings.findIndex(n => n.id === node.id);
+                            const targetPosition = parseInt(newPosInput) - 1;
+                            const mySpouseIdx = node.parentSpouseIndex !== undefined ? node.parentSpouseIndex : 0;
                             
-                            if (oldIndex !== -1 && targetPosition >= 0 && targetPosition < siblings.length && oldIndex !== targetPosition) {
-                                // Pindahkan posisi item di dalam array `siblings`
-                                const [movedItem] = siblings.splice(oldIndex, 1);
-                                siblings.splice(targetPosition, 0, movedItem);
+                            // Ambil hanya saudara kandung dari ibu/istri yang sama
+                            let allSiblings = familyData.filter(n => n.parentId === node.parentId);
+                            let sameMotherSiblings = allSiblings.filter(n => {
+                                const sIdx = n.parentSpouseIndex !== undefined ? n.parentSpouseIndex : 0;
+                                return sIdx === mySpouseIdx;
+                            });
 
-                                // Susun ulang urutan elemen dalam `familyData` secara keseluruhan agar urutannya terupdate
-                                // Kumpulkan semua ID selain saudara-saudara ini, lalu sisipkan kembali urutan saudara yang baru
-                                const siblingIds = siblings.map(s => s.id);
-                                let otherData = familyData.filter(n => n.parentId !== node.parentId);
+                            const oldIndex = sameMotherSiblings.findIndex(n => n.id === node.id);
+                            
+                            if (oldIndex !== -1 && targetPosition >= 0 && targetPosition < sameMotherSiblings.length && oldIndex !== targetPosition) {
+                                const [movedItem] = sameMotherSiblings.splice(oldIndex, 1);
+                                sameMotherSiblings.splice(targetPosition, 0, movedItem);
+
+                                // Rekonstruksi ulang array familyData dengan memasukkan kembali saudara seibu sesuai urutan baru
+                                let otherData = familyData.filter(n => {
+                                    if (n.parentId !== node.parentId) return true;
+                                    const sIdx = n.parentSpouseIndex !== undefined ? n.parentSpouseIndex : 0;
+                                    return sIdx !== mySpouseIdx;
+                                });
                                 
-                                // Cari posisi penyisipan yang tepat di dalam array familyData berdasarkan parentId
-                                // Cara paling aman adalah merekonstruksi array dengan menempatkan saudara-saudara sesuai urutan baru
                                 familyData = otherData;
-                                // Masukkan kembali saudara-saudara dengan urutan baru tepat setelah parent-nya atau di posisi relatifnya
-                                familyData.push(...siblings); 
+                                familyData.push(...sameMotherSiblings); 
                             }
                         }
                     }
