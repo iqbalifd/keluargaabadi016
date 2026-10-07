@@ -274,6 +274,7 @@
         let isolatedParentId = null; 
         let isolatedSpouseIndex = null; 
         let collapsedNodeIds = {}; 
+        let isFirstLoad = true; // Penanda untuk inisialisasi awal
 
         // --- KONFIGURASI VISUAL D3 ---
         const container = document.getElementById('tree-container');
@@ -357,6 +358,20 @@
             }
 
             try {
+                // Saat pertama kali situs dimuat, otomatis lipat semua anak dari generasi ke-2 (artinya Gen 1 & Gen 2 terbuka, Gen 3 ke bawah tertutup)
+                if (isFirstLoad) {
+                    familyData.forEach(n => {
+                        if (n.parentId) {
+                            const parentNode = familyData.find(p => p.id === n.parentId);
+                            // Jika parent memiliki parentId (berarti parent adalah Gen 2), maka node Gen 2 ini dilipat agar anak-anaknya (Gen 3) tertutup
+                            if (parentNode && parentNode.parentId) {
+                                collapsedNodeIds[n.parentId] = true;
+                            }
+                        }
+                    });
+                    isFirstLoad = false;
+                }
+
                 let activeData = familyData;
                 
                 if (isolatedParentId) {
@@ -613,11 +628,10 @@
             resultsBox.classList.remove('hidden');
         };
 
-        // --- DIPERBAIKI: Otomatis Buka (Expand) Rantai Leluhur Saat Diklik dari Hasil Pencarian ---
+        // --- Auto-Expand Rantai Leluhur Saat Diklik dari Hasil Pencarian ---
         window.focusNode = function(id) {
             let curr = familyData.find(n => n.id === id);
             if (curr) {
-                // Telusuri ke atas dari node ini hingga leluhur utama, buka semua foldernya (set false)
                 while (curr && curr.parentId) {
                     collapsedNodeIds[curr.parentId] = false;
                     curr = familyData.find(n => n.id === curr.parentId);
@@ -627,7 +641,7 @@
                 document.getElementById('search-results').classList.add('hidden');
                 document.getElementById('search-input').value = '';
 
-                updateTree(); // Render ulang pohon agar cabang yang tertutup terbuka otomatis
+                updateTree(); 
 
                 const nodeGroup = d3.selectAll(".node").filter(d => d.data.id === id);
                 if (!nodeGroup.empty()) {
