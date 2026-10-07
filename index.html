@@ -33,7 +33,7 @@
 
         /* Style D3.js SVG */
         .link { fill: none; stroke: #cbd5e1; stroke-width: 3px; }
-        .node-rect { cursor: pointer; }
+        .node-rect { cursor: pointer; transition: stroke 0.2s; }
         .node-main { rx: 14; ry: 14; }
         .node-spouse { rx: 14; ry: 14; }
         .text-main-name { font-weight: bold; font-size: 13px; fill: #ffffff; text-anchor: middle; pointer-events: none; }
@@ -93,7 +93,7 @@
         <div class="overflow-y-auto flex-1" id="panel-content">
             <div class="flex items-center justify-between mb-1 md:mb-2">
                 <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 tracking-tight">Silsilah</h1>
-                <span id="cloud-status" class="text-[10px] md:text-xs bg-yellow-100/80 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200/50 font-semibold shadow-sm backdrop-blur-sm">⏳ Sedang sync...</span>
+                <span id="cloud-status" class="text-[10px] md:text-xs bg-green-100/80 text-green-700 px-2 py-0.5 rounded-full border border-green-200/50 font-semibold shadow-sm backdrop-blur-sm">Cloud Aktif ☁️</span>
             </div>
             <p class="text-sm text-gray-500 mb-4 leading-tight">Peta visual silsilah keluarga besar.</p>
             
@@ -143,7 +143,7 @@
                 <div class="space-y-3">
                     <button onclick="isolateFamilyView()" class="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white text-sm font-bold py-2.5 px-4 rounded-xl transition duration-300 shadow-md flex items-center justify-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                        Lihat Silsilah Keturunan Ini Saja
+                        Lihat Silsilah Keluarga Ini Saja (Lengkap Keturunan)
                     </button>
                     <button onclick="openModal('child')" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-sm font-bold py-3 px-4 rounded-xl transition duration-300 shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 transform hover:-translate-y-0.5">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
@@ -246,7 +246,7 @@
 
         // --- KONFIGURASI VISUAL D3 ---
         const container = document.getElementById('tree-container');
-        const baseRectWidth = 150;
+        const baseRectWidth = 160;
         const rectHeight = 65;
         const coupleGap = 16; 
         
@@ -276,12 +276,12 @@
         svg.call(zoom);
         
         const treeLayout = d3.tree()
-            .nodeSize([baseRectWidth * 2 + 80, rectHeight + 90])
+            .nodeSize([baseRectWidth * 2 + 80, rectHeight + 110])
             .separation((a, b) => a.parent == b.parent ? 1 : 1.1);
 
         function calculateBoxWidth(name) {
             if (!name) return baseRectWidth;
-            const approxWidth = name.length * 8 + 40;
+            const approxWidth = name.length * 7.5 + 45;
             return Math.max(baseRectWidth, approxWidth);
         }
 
@@ -293,18 +293,6 @@
                 return `Anak ke-${index + 1}`;
             }
             return "";
-        }
-
-        // --- MENGATASI MULTI-PASANGAN (PERNIKAHAN KEDUA/SETERUSNYA) ---
-        function preprocessFamilyData(dataList) {
-            let expandedList = [];
-            let syntheticIdCounter = 900000;
-
-            dataList.forEach(node => {
-                expandedList.push({ ...node });
-            });
-
-            return expandedList;
         }
 
         // --- RENDER POHON SILSILAH ---
@@ -339,8 +327,7 @@
                     });
                 }
 
-                const processedData = preprocessFamilyData(activeData);
-                const root = d3.stratify().id(d => d.id).parentId(d => d.parentId)(processedData);
+                const root = d3.stratify().id(d => d.id).parentId(d => d.parentId)(activeData);
                 treeLayout(root);
 
                 g.selectAll(".link")
@@ -383,22 +370,24 @@
                         .attr("stroke", isSelected ? "#ffffff" : "rgba(255,255,255,0.3)")
                         .attr("stroke-width", isSelected ? "3px" : "1px");
 
+                    // Nama Utama
                     group.append("text")
                         .attr("class", "text-main-name")
                         .attr("x", mainX + (mainWidth/2))
-                        .attr("y", -12)
+                        .attr("y", -14)
                         .text(d.data.name || "");
 
                     let details = [];
                     const childNumLabel = getChildIndexLabel(d.data);
                     if (childNumLabel) details.push(childNumLabel);
-                    if (d.data.mainAlm) details.push("alm.");
+                    if (d.data.mainAlm) details.push("Alm.");
                     if (d.data.birthYear) details.push(d.data.birthYear);
 
+                    // Detail bawah nama utama
                     group.append("text")
                         .attr("class", "text-main-detail")
                         .attr("x", mainX + (mainWidth/2))
-                        .attr("y", 8)
+                        .attr("y", 6)
                         .text(details.join(" • "));
 
                     // KOTAK PASANGAN (PUTIH)
@@ -426,17 +415,17 @@
                         group.append("text")
                             .attr("class", "text-spouse-name")
                             .attr("x", spouseX + (spouseWidth/2))
-                            .attr("y", -12)
+                            .attr("y", -14)
                             .text(d.data.spouseName || "");
 
                         let spouseDetails = [];
-                        if (d.data.spouseAlm) spouseDetails.push("alm.");
+                        if (d.data.spouseAlm) spouseDetails.push("Alm.");
                         if (d.data.spouseBirthYear) spouseDetails.push(d.data.spouseBirthYear);
 
                         group.append("text")
                             .attr("class", "text-spouse-detail")
                             .attr("x", spouseX + (spouseWidth/2))
-                            .attr("y", 8)
+                            .attr("y", 6)
                             .text(spouseDetails.join(" • "));
                     }
                 });
@@ -582,7 +571,7 @@
             let mainTxt = data.name;
             const childNum = getChildIndexLabel(data);
             if (childNum) mainTxt += ` (${childNum})`;
-            if (data.mainAlm) mainTxt += " • alm.";
+            if (data.mainAlm) mainTxt += " (Alm.)";
             
             document.getElementById('info-name').textContent = mainTxt;
             document.getElementById('info-detail').textContent = data.birthYear ? `Tahun Lahir: ${data.birthYear}` : 'Tahun lahir tidak diketahui';
@@ -591,7 +580,7 @@
             if (data.spouseName) {
                 spouseBox.style.display = 'block';
                 let spouseTxt = data.spouseName;
-                if(data.spouseAlm) spouseTxt += " • alm.";
+                if(data.spouseAlm) spouseTxt += " (Alm.)";
                 document.getElementById('info-spouse-name').textContent = spouseTxt;
                 document.getElementById('info-spouse-detail').textContent = data.spouseBirthYear ? `Tahun Lahir: ${data.spouseBirthYear}` : 'Tahun lahir tidak diketahui';
             } else {
@@ -599,34 +588,6 @@
             }
             
             toggleMobilePanel(true);
-
-            try {
-                let activeData = familyData;
-                if (isolatedParentId) {
-                    const getSubtreeIds = (parentId) => {
-                        let ids = [parentId];
-                        const children = familyData.filter(n => n.parentId === parentId);
-                        for (const child of children) ids = ids.concat(getSubtreeIds(child.id));
-                        return ids;
-                    };
-                    const validIds = getSubtreeIds(isolatedParentId);
-                    activeData = familyData.filter(n => validIds.includes(n.id)).map(n => {
-                        if (n.id === isolatedParentId) return { ...n, parentId: null };
-                        return { ...n };
-                    });
-                }
-                const processed = preprocessFamilyData(activeData);
-                const rootNodes = d3.stratify().id(d => d.id).parentId(d => d.parentId)(processed);
-                const treeLayoutData = treeLayout(rootNodes);
-                const targetNode = treeLayoutData.descendants().find(n => n.id === data.id);
-                
-                if (targetNode) {
-                    const cw = document.getElementById('tree-container').clientWidth;
-                    const ch = document.getElementById('tree-container').clientHeight;
-                    const yOffset = window.innerWidth < 768 ? ch * 0.25 : ch / 2;
-                    svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity.translate(cw / 2 - targetNode.x, yOffset - targetNode.y).scale(1));
-                }
-            } catch (e) {}
         }
 
         function openModal(action) {
