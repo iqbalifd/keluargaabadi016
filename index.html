@@ -16,7 +16,6 @@
             overflow: hidden; 
         }
         
-        /* Area khusus untuk menggambar pohon silsilah */
         #tree-container {
             width: 100vw;
             height: 100vh;
@@ -31,42 +30,40 @@
             cursor: grabbing;
         }
 
-        /* Style D3.js SVG */
-        .link { fill: none; stroke: #cbd5e1; stroke-width: 3px; }
+        .link { fill: none; stroke: #94a3b8; stroke-width: 3.5px; }
         .node-rect { cursor: pointer; transition: stroke 0.2s; }
-        .node-main { rx: 14; ry: 14; }
-        .node-spouse { rx: 14; ry: 14; }
-        .text-main-name { font-weight: bold; font-size: 13px; fill: #ffffff; text-anchor: middle; pointer-events: none; }
-        .text-spouse-name { font-weight: bold; font-size: 13px; fill: #1f2937; text-anchor: middle; pointer-events: none; }
-        .text-main-detail { font-size: 10px; fill: #dbeafe; text-anchor: middle; pointer-events: none; }
-        .text-spouse-detail { font-size: 10px; fill: #6b7280; text-anchor: middle; pointer-events: none; }
-        .couple-link { stroke: #9ca3af; stroke-width: 3px; }
+        .node-main { rx: 16; ry: 16; }
+        .node-spouse { rx: 16; ry: 16; }
+        .text-main-name { font-weight: bold; font-size: 14px; fill: #ffffff; text-anchor: middle; pointer-events: none; }
+        .text-spouse-name { font-weight: bold; font-size: 14px; fill: #0f172a; text-anchor: middle; pointer-events: none; }
+        .text-main-detail { font-size: 11px; fill: #eff6ff; text-anchor: middle; pointer-events: none; }
+        .text-spouse-detail { font-size: 11px; fill: #475569; text-anchor: middle; pointer-events: none; }
+        .couple-link { stroke: #64748b; stroke-width: 3.5px; }
         
-        /* Tombol Collapse/Expand (+/-) stabil */
         .collapse-btn { cursor: pointer; }
 
-        /* Modal form */
         #member-modal {
             display: none;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.6);
             z-index: 50;
         }
 
-        /* Notifikasi Toast */
         #toast {
             visibility: hidden;
-            min-width: 250px;
-            background-color: #333;
+            min-width: 280px;
+            background-color: #1e293b;
             color: #fff;
             text-align: center;
-            border-radius: 8px;
-            padding: 12px;
+            border-radius: 12px;
+            padding: 16px;
             position: fixed;
             z-index: 100;
             left: 50%;
             bottom: 30px;
             transform: translateX(-50%);
-            font-size: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             opacity: 0;
             transition: opacity 0.5s, bottom 0.5s;
         }
@@ -85,99 +82,103 @@
 </head>
 <body>
 
-    <!-- Panel UI Glassmorphism -->
-    <div id="ui-panel" class="fixed z-20 bg-white/85 backdrop-blur-md border-gray-200 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.1)] md:shadow-2xl transition-transform duration-300 bottom-0 left-0 w-full rounded-t-3xl border-t border-white/60 px-5 pb-5 pt-2 max-h-[65vh] flex flex-col md:bottom-auto md:top-6 md:left-6 md:w-[340px] md:rounded-2xl md:border md:max-h-[90vh] md:pb-6 md:pt-6 md:px-6 md:transform-none">
+    <!-- Panel UI (Dioptimalkan Khusus Lansia: Teks Lebih Besar & Tombol Jelas) -->
+    <div id="ui-panel" class="fixed z-20 bg-white/95 backdrop-blur-md border-gray-200 shadow-2xl transition-transform duration-300 bottom-0 left-0 w-full rounded-t-3xl border-t px-6 pb-6 pt-3 max-h-[75vh] flex flex-col md:bottom-auto md:top-6 md:left-6 md:w-[380px] md:rounded-2xl md:border md:max-h-[92vh] md:py-6">
         
         <!-- Handle Swipe Mobile -->
-        <div id="mobile-handle" class="md:hidden flex justify-center mb-1 py-3 cursor-pointer w-full" onclick="toggleMobilePanel()">
-            <div class="w-14 h-1.5 bg-gray-300 rounded-full"></div>
+        <div id="mobile-handle" class="md:hidden flex justify-center mb-2 py-3 cursor-pointer w-full" onclick="toggleMobilePanel()">
+            <div class="w-16 h-2 bg-gray-300 rounded-full"></div>
         </div>
 
-        <div class="overflow-y-auto flex-1" id="panel-content">
-            <div class="flex items-center justify-between mb-1 md:mb-2">
-                <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 tracking-tight">Abadi Family 016</h1>
-                <span id="cloud-status" class="text-[10px] md:text-xs bg-green-100/80 text-green-700 px-2 py-0.5 rounded-full border border-green-200/50 font-semibold shadow-sm backdrop-blur-sm">Cloud Aktif ☁️</span>
+        <div class="overflow-y-auto flex-1 pr-1" id="panel-content">
+            <div class="flex items-center justify-between mb-2">
+                <h1 class="text-3xl font-black text-blue-900 tracking-tight">Abadi Family 016</h1>
+                <span id="cloud-status" class="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold shadow-sm">Cloud Aktif ☁️</span>
             </div>
-            <p class="text-sm text-gray-500 mb-4 leading-tight">Peta visual silsilah keluarga besar.</p>
+            <p class="text-base text-gray-600 mb-4 font-medium leading-normal">Peta visual silsilah keluarga.</p>
             
             <!-- Fitur Pencarian Anggota Keluarga -->
             <div class="mb-4 relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
-                <input type="text" id="search-input" oninput="handleSearch(this.value)" placeholder="Cari nama atau tahun..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-                <div id="search-results" class="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-30 hidden"></div>
+                <input type="text" id="search-input" oninput="handleSearch(this.value)" placeholder="Cari Nama Keluarga..." class="w-full pl-11 pr-4 py-3 bg-gray-50 border-2 border-gray-300 rounded-2xl text-base font-semibold text-gray-900 focus:outline-none focus:border-blue-600 transition-all shadow-inner">
+                <div id="search-results" class="absolute left-0 right-0 mt-1 bg-white border-2 border-gray-200 rounded-2xl shadow-xl max-h-56 overflow-y-auto z-30 hidden"></div>
             </div>
 
             <!-- Banner Mode Filter Keluarga -->
-            <div id="filter-banner" class="hidden mb-4 bg-indigo-50 border border-indigo-200 p-3 rounded-xl flex items-center justify-between">
+            <div id="filter-banner" class="hidden mb-4 bg-indigo-50 border-2 border-indigo-300 p-4 rounded-2xl flex items-center justify-between shadow-sm">
                 <div>
-                    <p class="text-[10px] text-indigo-500 font-bold uppercase tracking-wide">Mode Fokus Keturunan</p>
-                    <p id="filter-banner-text" class="text-xs font-bold text-indigo-900">Keluarga Bpk. ...</p>
+                    <p class="text-xs text-indigo-600 font-extrabold uppercase tracking-wider">Sedang Fokus Melihat</p>
+                    <p id="filter-banner-text" class="text-sm font-bold text-indigo-950 mt-0.5">Keluarga Bpk. ...</p>
                 </div>
-                <button onclick="resetFamilyFilter()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm">Reset Silsilah</button>
+                <button onclick="resetFamilyFilter()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-colors shadow">Tampilkan Semua</button>
             </div>
 
-            <div id="empty-state" class="text-center py-2 md:py-4">
-                <button onclick="openModal('root')" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl transition duration-300 shadow-lg shadow-blue-500/30 transform hover:-translate-y-0.5 text-sm md:text-base">
-                    + Tambah Leluhur Utama
+            <div id="empty-state" class="text-center py-4">
+                <button onclick="openModal('root')" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-4 px-6 rounded-2xl transition duration-300 shadow-lg text-lg flex items-center justify-center gap-2">
+                    <span class="text-2xl leading-none">+</span> Tambah Leluhur Utama
                 </button>
-                <p class="text-xs text-gray-400 mt-3 font-medium tracking-wide">MULAI DARI KAKEK/NENEK BUYUT</p>
+                <p class="text-sm text-gray-500 mt-3 font-semibold">MULAI DARI KAKEK ATAU NENEK BUYUT</p>
             </div>
 
-            <!-- Info Panel -->
-            <div id="selected-info" class="hidden mt-2 pt-4 border-t border-gray-200/60">
-                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Keluarga Terpilih</h2>
+            <!-- Info Panel Yang Dipilih -->
+            <div id="selected-info" class="hidden mt-2 pt-4 border-t-2 border-gray-200">
+                <h2 class="text-xs font-black text-gray-500 uppercase tracking-widest mb-3">Anggota Terpilih</h2>
                 
-                <div class="bg-gradient-to-br from-blue-50 to-blue-100/50 p-3.5 rounded-xl border border-blue-200/60 mb-2 shadow-sm">
-                    <p class="text-[10px] md:text-xs text-blue-500 font-bold tracking-wide mb-1">GARIS KETURUNAN UTAMA</p>
-                    <p id="info-name" class="font-extrabold text-base md:text-lg text-blue-900">-</p>
-                    <p id="info-detail" class="text-xs md:text-sm text-blue-700 mt-0.5 md:mt-1">-</p>
+                <!-- Kotak Anggota Utama -->
+                <div class="bg-blue-900 text-white p-4.5 rounded-2xl mb-3 shadow-md border-2 border-blue-800">
+                    <p class="text-xs text-blue-200 font-bold tracking-wider mb-0.5">GARIS KETURUNAN UTAMA</p>
+                    <p id="info-name" class="font-black text-xl text-white">-</p>
+                    <p id="info-detail" class="text-sm text-blue-100 mt-1 font-medium">-</p>
                 </div>
 
-                <!-- Pilihan Pasangan jika lebih dari satu -->
-                <div class="mb-2">
-                    <div class="flex items-center justify-between mb-1">
-                        <label class="text-[10px] md:text-xs text-gray-500 font-bold tracking-wide uppercase">PILIH PASANGAN / ISTRI</label>
-                        <button onclick="openModal('add_spouse')" class="text-[11px] text-blue-600 font-bold hover:underline flex items-center gap-1">+ Tambah Pasangan Lain</button>
+                <!-- Bagian Pilihan Pasangan (Menggantikan Dropdown agar tidak bikin pusing) -->
+                <div id="spouse-container-box" class="mb-3" style="display: none;">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-xs text-gray-700 font-black uppercase tracking-wider">PILIH PASANGAN</label>
+                        <button onclick="openModal('add_spouse')" class="text-xs text-blue-700 font-extrabold hover:underline flex items-center gap-1 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">+ Tambah Pasangan Lain</button>
                     </div>
-                    <select id="spouse-selector" onchange="switchActiveSpouse(this.value)" class="w-full bg-white border border-gray-200 rounded-xl p-2 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <!-- Tombol Tab Pasangan (Pengganti Dropdown) -->
+                    <div id="spouse-tabs-container" class="flex flex-wrap gap-2 mb-2">
                         <!-- Diisi dinamis via JS -->
-                    </select>
+                    </div>
                 </div>
 
-                <div id="spouse-info-box" class="bg-white/80 p-3.5 rounded-xl border border-gray-200/80 mb-4 shadow-sm">
-                    <p id="info-spouse-name" class="font-extrabold text-sm md:text-md text-gray-800">-</p>
-                    <p id="info-spouse-detail" class="text-xs md:text-sm text-gray-500 mt-0.5 md:mt-1">-</p>
+                <!-- Kotak Info Pasangan Aktif -->
+                <div id="spouse-info-box" class="bg-gray-100 p-4 rounded-2xl border-2 border-gray-300 mb-4 shadow-sm">
+                    <p id="info-spouse-name" class="font-extrabold text-lg text-gray-900">-</p>
+                    <p id="info-spouse-detail" class="text-sm text-gray-600 mt-1 font-medium">-</p>
                 </div>
                 
+                <!-- Tombol Aksi Utama -->
                 <div class="space-y-3">
-                    <button onclick="isolateFamilyView()" class="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white text-sm font-bold py-2.5 px-4 rounded-xl transition duration-300 shadow-md flex items-center justify-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                        Lihat Silsilah Keluarga Ini Saja (Lengkap Keturunan)
+                    <button onclick="isolateFamilyView()" class="w-full bg-purple-700 hover:bg-purple-800 text-white text-base font-bold py-3.5 px-4 rounded-2xl transition duration-300 shadow-md flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        Fokus Lihat Keluarga Ini Saja
                     </button>
-                    <button onclick="openModal('child')" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-sm font-bold py-3 px-4 rounded-xl transition duration-300 shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 transform hover:-translate-y-0.5">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                        Tambah Anak
+                    <button onclick="openModal('child')" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white text-base font-bold py-4 px-4 rounded-2xl transition duration-300 shadow-lg flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" /></svg>
+                        + Tambah Anak
                     </button>
-                    <div class="flex gap-2">
-                        <button onclick="openModal('edit')" class="flex-1 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-sm font-semibold py-2.5 px-3 rounded-xl transition duration-200 shadow-sm">Edit</button>
-                        <button onclick="confirmDelete()" class="flex-1 bg-red-50 hover:bg-red-100 border border-red-100 text-red-600 text-sm font-semibold py-2.5 px-3 rounded-xl transition duration-200 shadow-sm">Hapus</button>
+                    <div class="grid grid-cols-2 gap-3 pt-1">
+                        <button onclick="openModal('edit')" class="bg-white hover:bg-gray-100 border-2 border-gray-300 text-gray-800 text-base font-bold py-3 px-3 rounded-2xl transition shadow-sm">Ubah Data</button>
+                        <button onclick="confirmDelete()" class="bg-red-50 hover:bg-red-100 border-2 border-red-200 text-red-700 text-base font-bold py-3 px-3 rounded-2xl transition shadow-sm">Hapus Data</button>
                     </div>
                 </div>
             </div>
 
             <!-- Tombol Aksi Global -->
-            <div class="mt-4 pt-4 border-t border-gray-200/60 space-y-3">
-                 <button onclick="resetView()" class="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-bold py-2.5 px-4 rounded-xl transition duration-200 shadow-sm flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-                    Tengahkan Tampilan
+            <div class="mt-5 pt-4 border-t-2 border-gray-200 space-y-3">
+                 <button onclick="resetView()" class="w-full bg-gray-100 border-2 border-gray-300 hover:bg-gray-200 text-gray-800 text-base font-bold py-3.5 px-4 rounded-2xl transition shadow-sm flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                    Posisikan ke Tengah Layar
                 </button>
-                <button onclick="downloadTreeImage()" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-sm font-bold py-2.5 px-4 rounded-xl transition duration-300 shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 transform hover:-translate-y-0.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    Unduh Gambar (High-Res)
+                <button onclick="downloadTreeImage()" class="w-full bg-indigo-800 hover:bg-indigo-900 text-white text-base font-bold py-3.5 px-4 rounded-2xl transition shadow-lg flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Unduh Gambar Silsilah
                 </button>
             </div>
         </div>
@@ -187,71 +188,70 @@
     <div id="toast">Notifikasi</div>
 
     <!-- Modal Form Tambah/Edit -->
-    <div id="member-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 backdrop-blur-sm bg-gray-900/40 transition-opacity" style="display: none;">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 md:p-8 relative max-h-[95vh] overflow-y-auto border border-white/20">
-            <button onclick="closeModal()" class="absolute top-5 right-5 text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+    <div id="member-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 backdrop-blur-sm bg-gray-900/60" style="display: none;">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 md:p-8 relative max-h-[95vh] overflow-y-auto border-2 border-gray-200">
+            <button onclick="closeModal()" class="absolute top-6 right-6 text-gray-500 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-full p-2.5 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
             
-            <h2 id="modal-title" class="text-2xl font-extrabold text-gray-800 mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">Tambah Anggota</h2>
+            <h2 id="modal-title" class="text-2xl font-black text-gray-900 mb-6">Tambah Anggota</h2>
             
             <form id="member-form" onsubmit="handleFormSubmit(event)">
                 <input type="hidden" id="form-action"> 
 
                 <!-- Pilihan Pasangan untuk Tambah Anak -->
-                <div id="child-spouse-section" class="mb-5 bg-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm" style="display: none;">
-                    <label class="block text-indigo-900 text-xs font-bold mb-2 uppercase tracking-wider" for="childSpouseIndex">Anak dari Pasangan / Istri Ke-:</label>
-                    <select id="childSpouseIndex" class="w-full bg-white border border-indigo-200 rounded-lg p-2.5 text-xs font-semibold text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <div id="child-spouse-section" class="mb-5 bg-indigo-50 p-4 rounded-2xl border-2 border-indigo-200 shadow-sm" style="display: none;">
+                    <label class="block text-indigo-950 text-sm font-black mb-2 uppercase" for="childSpouseIndex">Anak dari Pasangan / Istri Ke-:</label>
+                    <select id="childSpouseIndex" class="w-full bg-white border-2 border-indigo-300 rounded-xl p-3 text-sm font-bold text-indigo-950 focus:outline-none focus:border-indigo-600">
                         <!-- Diisi dinamis via JS -->
                     </select>
                 </div>
 
-                <!-- Pengaturan Urutan Anak (Hanya muncul saat Edit Anak) -->
-                <div id="edit-sibling-section" class="mb-5 bg-amber-50 p-4 rounded-xl border border-amber-200 shadow-sm" style="display: none;">
-                    <label class="block text-amber-900 text-xs font-bold mb-2 uppercase tracking-wider" for="editSiblingPosition">Ubah Urutan Anak ke- (dari Istri Terkait):</label>
-                    <input class="shadow-sm appearance-none border border-amber-300 rounded-lg w-full py-2.5 px-3 text-amber-900 bg-white leading-tight focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-xs font-semibold" id="editSiblingPosition" type="number" min="1" placeholder="Misal: 1, 2, 3">
-                    <p class="text-[10px] text-amber-700 mt-1">Mengubah posisi urutan di antara saudara kandung dari istri yang sama.</p>
+                <!-- Pengaturan Urutan Anak -->
+                <div id="edit-sibling-section" class="mb-5 bg-amber-50 p-4 rounded-2xl border-2 border-amber-300 shadow-sm" style="display: none;">
+                    <label class="block text-amber-950 text-sm font-black mb-2 uppercase" for="editSiblingPosition">Ubah Urutan Anak ke-:</label>
+                    <input class="shadow-inner appearance-none border-2 border-amber-300 rounded-xl w-full py-3 px-3.5 text-amber-950 bg-white leading-tight focus:outline-none focus:border-amber-600 text-sm font-bold" id="editSiblingPosition" type="number" min="1" placeholder="Contoh: 1, 2, atau 3">
                 </div>
                 
-                <div id="main-person-section" class="bg-gradient-to-br from-blue-50 to-white p-4 rounded-xl border border-blue-100 mb-5 shadow-sm">
-                    <h3 id="main-section-title" class="text-xs font-bold text-blue-600 mb-3 uppercase tracking-wider">Data Garis Keturunan Utama</h3>
-                    <div class="mb-3">
-                        <label class="block text-gray-700 text-sm font-semibold mb-1" for="name">Nama Lengkap *</label>
-                        <input class="shadow-sm appearance-none border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" id="name" type="text" placeholder="Misal: Budi Santoso" required>
+                <div id="main-person-section" class="bg-blue-50/70 p-5 rounded-2xl border-2 border-blue-200 mb-5 shadow-sm">
+                    <h3 id="main-section-title" class="text-sm font-black text-blue-900 mb-3 uppercase tracking-wider">Data Anggota Utama</h3>
+                    <div class="mb-4">
+                        <label class="block text-gray-800 text-sm font-bold mb-1.5" for="name">Nama Lengkap *</label>
+                        <input class="shadow-inner appearance-none border-2 border-gray-300 rounded-xl w-full py-3 px-3.5 text-gray-900 text-base font-semibold leading-tight focus:outline-none focus:border-blue-600 bg-white" id="name" type="text" placeholder="Contoh: Budi Santoso" required>
                     </div>
                     
-                    <div class="mb-3 flex items-center gap-2 bg-white p-2.5 rounded-lg border border-gray-200">
-                        <input type="checkbox" id="mainAlm" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300">
-                        <label for="mainAlm" class="text-sm text-gray-700 font-medium cursor-pointer">Almarhum / Almarhumah</label>
+                    <div class="mb-4 flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-300">
+                        <input type="checkbox" id="mainAlm" class="w-5 h-5 text-blue-700 rounded focus:ring-blue-600 border-gray-300">
+                        <label for="mainAlm" class="text-sm text-gray-900 font-bold cursor-pointer">Sudah Almarhum / Almarhumah</label>
                     </div>
 
                     <div>
-                        <label class="block text-gray-700 text-sm font-semibold mb-1" for="birthYear">Tahun Lahir</label>
-                        <input class="shadow-sm appearance-none border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" id="birthYear" type="number" placeholder="Misal: 1950">
+                        <label class="block text-gray-800 text-sm font-bold mb-1.5" for="birthYear">Tahun Lahir (Opsional)</label>
+                        <input class="shadow-inner appearance-none border-2 border-gray-300 rounded-xl w-full py-3 px-3.5 text-gray-900 text-base font-semibold leading-tight focus:outline-none focus:border-blue-600 bg-white" id="birthYear" type="number" placeholder="Contoh: 1950">
                     </div>
                 </div>
 
-                <div id="spouse-section" class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6 shadow-sm">
-                    <h3 class="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Data Suami / Istri (Menantu)</h3>
-                    <div class="mb-3">
-                        <label class="block text-gray-700 text-sm font-semibold mb-1" for="spouseName">Nama Pasangan</label>
-                        <input class="shadow-sm appearance-none border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all" id="spouseName" type="text" placeholder="Biarkan kosong jika belum ada">
+                <div id="spouse-section" class="bg-gray-50 p-5 rounded-2xl border-2 border-gray-300 mb-6 shadow-sm">
+                    <h3 class="text-sm font-black text-gray-700 mb-3 uppercase tracking-wider">Data Suami / Istri (Menantu)</h3>
+                    <div class="mb-4">
+                        <label class="block text-gray-800 text-sm font-bold mb-1.5" for="spouseName">Nama Pasangan</label>
+                        <input class="shadow-inner appearance-none border-2 border-gray-300 rounded-xl w-full py-3 px-3.5 text-gray-900 text-base font-semibold leading-tight focus:outline-none focus:border-gray-500 bg-white" id="spouseName" type="text" placeholder="Kosongkan jika belum ada">
                     </div>
                     
-                    <div class="mb-3 flex items-center gap-2 bg-white p-2.5 rounded-lg border border-gray-200">
-                        <input type="checkbox" id="spouseAlm" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300">
-                        <label for="spouseAlm" class="text-sm text-gray-700 font-medium cursor-pointer">Pasangan Almarhum / Almarhumah</label>
+                    <div class="mb-4 flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-300">
+                        <input type="checkbox" id="spouseAlm" class="w-5 h-5 text-blue-700 rounded focus:ring-blue-600 border-gray-300">
+                        <label for="spouseAlm" class="text-sm text-gray-900 font-bold cursor-pointer">Pasangan Sudah Almarhum / Almarhumah</label>
                     </div>
 
                     <div>
-                        <label class="block text-gray-700 text-sm font-semibold mb-1" for="spouseBirthYear">Tahun Lahir Pasangan</label>
-                        <input class="shadow-sm appearance-none border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all" id="spouseBirthYear" type="number" placeholder="Misal: 1952">
+                        <label class="block text-gray-800 text-sm font-bold mb-1.5" for="spouseBirthYear">Tahun Lahir Pasangan</label>
+                        <input class="shadow-inner appearance-none border-2 border-gray-300 rounded-xl w-full py-3 px-3.5 text-gray-900 text-base font-semibold leading-tight focus:outline-none focus:border-gray-500 bg-white" id="spouseBirthYear" type="number" placeholder="Contoh: 1952">
                     </div>
                 </div>
                 
                 <div class="flex items-center justify-end gap-3 pt-2">
-                    <button type="button" onclick="closeModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-5 rounded-xl transition-colors focus:outline-none">Batal</button>
-                    <button type="submit" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg shadow-blue-500/30 transform hover:-translate-y-0.5 transition-all focus:outline-none">Simpan</button>
+                    <button type="button" onclick="closeModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3.5 px-6 rounded-xl text-base transition">Batal</button>
+                    <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-3.5 px-8 rounded-xl text-base shadow-lg transition">Simpan</button>
                 </div>
             </form>
         </div>
@@ -266,7 +266,6 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- STATE MANAGEMENT ---
         let familyData = []; 
         let nextId = 1; 
         let selectedNodeId = null; 
@@ -274,13 +273,12 @@
         let isolatedParentId = null; 
         let isolatedSpouseIndex = null; 
         let collapsedNodeIds = {}; 
-        let isFirstLoad = true; // Penanda untuk inisialisasi awal
+        let isFirstLoad = true;
 
-        // --- KONFIGURASI VISUAL D3 ---
         const container = document.getElementById('tree-container');
-        const baseRectWidth = 160;
-        const rectHeight = 65;
-        const coupleGap = 16; 
+        const baseRectWidth = 180;
+        const rectHeight = 70;
+        const coupleGap = 20; 
         
         const svg = d3.select("#tree-container").append("svg")
             .attr("width", "100%")
@@ -289,31 +287,30 @@
         const defs = svg.append("defs");
         
         const filter = defs.append("filter").attr("id", "drop-shadow").attr("x", "-20%").attr("y", "-20%").attr("width", "140%").attr("height", "140%");
-        filter.append("feDropShadow").attr("dx", "0").attr("dy", "5").attr("stdDeviation", "5").attr("flood-opacity", "0.1");
+        filter.append("feDropShadow").attr("dx", "0").attr("dy", "5").attr("stdDeviation", "6").attr("flood-opacity", "0.15");
 
         const filterActive = defs.append("filter").attr("id", "drop-shadow-active").attr("x", "-20%").attr("y", "-20%").attr("width", "140%").attr("height", "140%");
-        filterActive.append("feDropShadow").attr("dx", "0").attr("dy", "8").attr("stdDeviation", "8").attr("flood-color", "#3b82f6").attr("flood-opacity", "0.4");
+        filterActive.append("feDropShadow").attr("dx", "0").attr("dy", "8").attr("stdDeviation", "10").attr("flood-color", "#2563eb").attr("flood-opacity", "0.5");
 
         const gradMain = defs.append("linearGradient").attr("id", "grad-main").attr("x1", "0%").attr("y1", "0%").attr("x2", "100%").attr("y2", "100%");
-        gradMain.append("stop").attr("offset", "0%").attr("stop-color", "#60a5fa"); 
-        gradMain.append("stop").attr("offset", "100%").attr("stop-color", "#2563eb"); 
+        gradMain.append("stop").attr("offset", "0%").attr("stop-color", "#3b82f6"); 
+        gradMain.append("stop").attr("offset", "100%").attr("stop-color", "#1d4ed8"); 
 
         const gradSpouse = defs.append("linearGradient").attr("id", "grad-spouse").attr("x1", "0%").attr("y1", "0%").attr("x2", "100%").attr("y2", "100%");
         gradSpouse.append("stop").attr("offset", "0%").attr("stop-color", "#ffffff");
-        gradSpouse.append("stop").attr("offset", "100%").attr("stop-color", "#f3f4f6"); 
+        gradSpouse.append("stop").attr("offset", "100%").attr("stop-color", "#f1f5f9"); 
 
         const g = svg.append("g");
-
         const zoom = d3.zoom().scaleExtent([0.1, 3]).on("zoom", (event) => g.attr("transform", event.transform));
         svg.call(zoom);
         
         const treeLayout = d3.tree()
-            .nodeSize([baseRectWidth * 2 + 80, rectHeight + 110])
-            .separation((a, b) => a.parent == b.parent ? 1 : 1.1);
+            .nodeSize([baseRectWidth * 2 + 90, rectHeight + 120])
+            .separation((a, b) => a.parent == b.parent ? 1 : 1.2);
 
         function calculateBoxWidth(name) {
             if (!name) return baseRectWidth;
-            const approxWidth = name.length * 7.5 + 45;
+            const approxWidth = name.length * 8 + 50;
             return Math.max(baseRectWidth, approxWidth);
         }
 
@@ -335,17 +332,12 @@
             });
 
             const index = sameMotherSiblings.findIndex(n => n.id === nodeData.id);
-            
-            let label = "";
             if (index !== -1) {
-                label = `Anak ke-${index + 1} dari Istri ${mySpouseIdx + 1}`;
-            } else {
-                label = `Istri ${mySpouseIdx + 1}`;
+                return `Anak ke-${index + 1} (Istri ${mySpouseIdx + 1})`;
             }
-            return label;
+            return "";
         }
 
-        // --- RENDER POHON SILSILAH ---
         function updateTree() {
             g.selectAll("*").remove();
 
@@ -358,12 +350,10 @@
             }
 
             try {
-                // Saat pertama kali situs dimuat, otomatis lipat semua anak dari generasi ke-2 (artinya Gen 1 & Gen 2 terbuka, Gen 3 ke bawah tertutup)
                 if (isFirstLoad) {
                     familyData.forEach(n => {
                         if (n.parentId) {
                             const parentNode = familyData.find(p => p.id === n.parentId);
-                            // Jika parent memiliki parentId (berarti parent adalah Gen 2), maka node Gen 2 ini dilipat agar anak-anaknya (Gen 3) tertutup
                             if (parentNode && parentNode.parentId) {
                                 collapsedNodeIds[n.parentId] = true;
                             }
@@ -373,7 +363,6 @@
                 }
 
                 let activeData = familyData;
-                
                 if (isolatedParentId) {
                     const getSubtreeIds = (parentId, targetSpouseIdx) => {
                         let ids = [parentId];
@@ -385,7 +374,6 @@
                             }
                             return true;
                         });
-
                         for (const child of children) {
                             ids = ids.concat(getSubtreeIds(child.id, null));
                         }
@@ -394,16 +382,12 @@
 
                     const validIds = getSubtreeIds(isolatedParentId, isolatedSpouseIndex);
                     activeData = familyData.filter(n => validIds.includes(n.id)).map(n => {
-                        if (n.id === isolatedParentId) {
-                            return { ...n, parentId: null }; 
-                        }
+                        if (n.id === isolatedParentId) return { ...n, parentId: null }; 
                         return { ...n };
                     });
                 }
 
-                const visibleData = [];
                 const hiddenIds = new Set();
-
                 const getHiddenDescendantIds = (parentId) => {
                     let hIds = [];
                     const children = activeData.filter(n => n.parentId === parentId);
@@ -421,7 +405,6 @@
                 }
 
                 const filteredTreeData = activeData.filter(n => !hiddenIds.has(n.id));
-
                 const root = d3.stratify().id(d => d.id).parentId(d => d.parentId)(filteredTreeData);
                 treeLayout(root);
 
@@ -456,7 +439,7 @@
                     const spouseWidth = hasSpouse ? calculateBoxWidth(currentSpouse.name) : 0;
                     const mainX = hasSpouse ? -(mainWidth + (coupleGap/2)) : -(mainWidth / 2);
                     
-                    // KOTAK UTAMA (BIRU)
+                    // Kotak Utama
                     group.append("rect")
                         .attr("class", "node-rect node-main")
                         .attr("x", mainX)
@@ -465,14 +448,14 @@
                         .attr("height", rectHeight)
                         .attr("fill", "url(#grad-main)")
                         .attr("filter", isSelected ? "url(#drop-shadow-active)" : "url(#drop-shadow)")
-                        .attr("stroke", isSelected ? "#ffffff" : "rgba(255,255,255,0.3)")
-                        .attr("stroke-width", isSelected ? "3px" : "1px");
+                        .attr("stroke", isSelected ? "#ffffff" : "rgba(255,255,255,0.4)")
+                        .attr("stroke-width", isSelected ? "4px" : "1.5px");
 
-                    // Nama Utama
                     group.append("text")
                         .attr("class", "text-main-name")
                         .attr("x", mainX + (mainWidth/2))
                         .attr("y", -14)
+                        .attr("font-size", "14px")
                         .text(d.data.name || "");
 
                     let details = [];
@@ -484,10 +467,11 @@
                     group.append("text")
                         .attr("class", "text-main-detail")
                         .attr("x", mainX + (mainWidth/2))
-                        .attr("y", 6)
+                        .attr("y", 10)
+                        .attr("font-size", "11px")
                         .text(details.join(" • "));
 
-                    // KOTAK PASANGAN (PUTIH)
+                    // Kotak Pasangan
                     if (hasSpouse) {
                         const spouseX = coupleGap / 2;
 
@@ -506,28 +490,29 @@
                             .attr("height", rectHeight)
                             .attr("fill", "url(#grad-spouse)")
                             .attr("filter", isSelected ? "url(#drop-shadow-active)" : "url(#drop-shadow)")
-                            .attr("stroke", isSelected ? "#3b82f6" : "#e5e7eb")
-                            .attr("stroke-width", isSelected ? "3px" : "1px");
+                            .attr("stroke", isSelected ? "#2563eb" : "#cbd5e1")
+                            .attr("stroke-width", isSelected ? "4px" : "1.5px");
 
                         group.append("text")
                             .attr("class", "text-spouse-name")
                             .attr("x", spouseX + (spouseWidth/2))
                             .attr("y", -14)
+                            .attr("font-size", "14px")
                             .text(currentSpouse.name || "");
 
                         let spouseDetails = [];
-                        if (spouses.length > 1) spouseDetails.push(`Pasangan ${activeIdx + 1}/${spouses.length}`);
+                        if (spouses.length > 1) spouseDetails.push(`Istri ${activeIdx + 1}/${spouses.length}`);
                         if (currentSpouse.spouseAlm) spouseDetails.push("Alm.");
                         if (currentSpouse.spouseBirthYear) spouseDetails.push(currentSpouse.spouseBirthYear);
 
                         group.append("text")
                             .attr("class", "text-spouse-detail")
                             .attr("x", spouseX + (spouseWidth/2))
-                            .attr("y", 6)
+                            .attr("y", 10)
+                            .attr("font-size", "11px")
                             .text(spouseDetails.join(" • "));
                     }
 
-                    // --- TOMBOL OPEN/CLOSE (+/-) STABIL ---
                     const hasChildren = familyData.some(n => n.parentId === d.data.id);
                     if (hasChildren) {
                         const isCollapsed = !!collapsedNodeIds[d.data.id];
@@ -537,21 +522,20 @@
                             .on("click", (event) => toggleCollapse(event, d.data.id));
 
                         btnGroup.append("circle")
-                            .attr("r", 11)
-                            .attr("fill", "#2563eb")
+                            .attr("r", 13)
+                            .attr("fill", "#1e40af")
                             .attr("stroke", "#ffffff")
-                            .attr("stroke-width", "2px");
+                            .attr("stroke-width", "2.5px");
 
                         btnGroup.append("text")
                             .attr("text-anchor", "middle")
-                            .attr("dy", "3.5px")
+                            .attr("dy", "4px")
                             .attr("fill", "#ffffff")
-                            .attr("font-size", "12px")
+                            .attr("font-size", "14px")
                             .attr("font-weight", "bold")
                             .text(isCollapsed ? "+" : "-");
                     }
                 });
-
             } catch (error) {
                 console.error("Tree render error:", error);
             }
@@ -570,11 +554,11 @@
             const spouseNameDesc = activeSpouseObj && activeSpouseObj.name ? ` & ${activeSpouseObj.name}` : '';
 
             document.getElementById('filter-banner').classList.remove('hidden');
-            document.getElementById('filter-banner-text').textContent = `Keluarga ${node.name}${spouseNameDesc} & Keturunannya`;
+            document.getElementById('filter-banner-text').textContent = `Keluarga ${node.name}${spouseNameDesc}`;
             
             updateTree();
             resetView();
-            showToast(`Menampilkan silsilah keturunan ${node.name}`);
+            showToast(`Menampilkan khusus keturunan ${node.name}`);
         };
 
         window.resetFamilyFilter = function() {
@@ -598,15 +582,12 @@
             const matches = familyData.filter(n => {
                 if (n.name && n.name.toLowerCase().includes(lowerQuery)) return true;
                 if (n.birthYear && n.birthYear.toString().includes(lowerQuery)) return true;
-                if (n.spouses && n.spouses.some(s => 
-                    (s.name && s.name.toLowerCase().includes(lowerQuery)) || 
-                    (s.spouseBirthYear && s.spouseBirthYear.toString().includes(lowerQuery))
-                )) return true;
+                if (n.spouses && n.spouses.some(s => s.name && s.name.toLowerCase().includes(lowerQuery))) return true;
                 return false;
             });
 
             if (matches.length === 0) {
-                resultsBox.innerHTML = '<div class="p-3 text-xs text-gray-400 text-center">Nama atau tahun tidak ditemukan</div>';
+                resultsBox.innerHTML = '<div class="p-4 text-sm text-gray-500 text-center font-bold">Nama tidak ditemukan</div>';
                 resultsBox.classList.remove('hidden');
                 return;
             }
@@ -619,16 +600,15 @@
                     if (spouseNames) spouseSummary = ` • Pasangan: ${spouseNames}`;
                 }
 
-                html += `<div onclick="focusNode('${m.id}')" class="p-2.5 hover:bg-blue-50 cursor-pointer border-b border-gray-100 text-xs transition-colors">
-                    <p class="font-bold text-blue-900">${m.name} ${m.birthYear ? '(' + m.birthYear + ')' : ''}</p>
-                    <p class="text-[10px] text-gray-500">${spouseSummary}</p>
+                html += `<div onclick="focusNode('${m.id}')" class="p-3.5 hover:bg-blue-50 cursor-pointer border-b border-gray-100 text-sm transition-colors">
+                    <p class="font-extrabold text-blue-950">${m.name} ${m.birthYear ? '(' + m.birthYear + ')' : ''}</p>
+                    <p class="text-xs text-gray-600 font-medium">${spouseSummary}</p>
                 </div>`;
             });
             resultsBox.innerHTML = html;
             resultsBox.classList.remove('hidden');
         };
 
-        // --- Auto-Expand Rantai Leluhur Saat Diklik dari Hasil Pencarian ---
         window.focusNode = function(id) {
             let curr = familyData.find(n => n.id === id);
             if (curr) {
@@ -640,7 +620,6 @@
                 selectNode(familyData.find(n => n.id === id));
                 document.getElementById('search-results').classList.add('hidden');
                 document.getElementById('search-input').value = '';
-
                 updateTree(); 
 
                 const nodeGroup = d3.selectAll(".node").filter(d => d.data.id === id);
@@ -667,7 +646,7 @@
         function toggleMobilePanel(forceOpen = false) {
             if (window.innerWidth >= 768) return; 
             uiPanel.style.transitionDuration = ''; 
-            const closedY = uiPanel.offsetHeight - 40; 
+            const closedY = uiPanel.offsetHeight - 50; 
             if (!isMobilePanelOpen || forceOpen) {
                 uiPanel.style.transform = 'translateY(0)'; 
                 isMobilePanelOpen = true;
@@ -680,12 +659,10 @@
 
         uiPanel.addEventListener('touchstart', (e) => {
             if (window.innerWidth >= 768) return;
-            const isHandle = e.target.closest('#mobile-handle');
-            const isHeader = e.target.closest('h1');
-            if (isHandle || isHeader || !isMobilePanelOpen) {
+            if (e.target.closest('#mobile-handle') || e.target.closest('h1') || !isMobilePanelOpen) {
                 isDraggingPanel = true;
                 dragStartY = e.touches[0].clientY;
-                panelClosedY = uiPanel.offsetHeight - 40;
+                panelClosedY = uiPanel.offsetHeight - 50;
                 panelCurrentY = isMobilePanelOpen ? 0 : panelClosedY;
                 uiPanel.style.transitionDuration = '0ms';
             }
@@ -693,21 +670,19 @@
 
         uiPanel.addEventListener('touchmove', (e) => {
             if (!isDraggingPanel) return;
-            const touchY = e.touches[0].clientY;
-            const deltaY = touchY - dragStartY;
+            const deltaY = e.touches[0].clientY - dragStartY;
             let newY = panelCurrentY + deltaY;
             if (newY < 0) newY = 0;
             if (newY > panelClosedY) newY = panelClosedY;
             uiPanel.style.transform = `translateY(${newY}px)`;
         }, {passive: true});
 
-        uiPanel.addEventListener('touchend', (e) => {
+        uiPanel.addEventListener('touchend', () => {
             if (!isDraggingPanel) return;
             isDraggingPanel = false;
             uiPanel.style.transitionDuration = '';
             const matrix = new DOMMatrixReadOnly(window.getComputedStyle(uiPanel).transform);
-            const finalY = matrix.m42;
-            if (finalY > (panelClosedY / 2)) {
+            if (matrix.m42 > (panelClosedY / 2)) {
                 uiPanel.style.transform = `translateY(${panelClosedY}px)`;
                 isMobilePanelOpen = false;
             } else {
@@ -721,7 +696,7 @@
                 uiPanel.style.transform = 'none';
                 isMobilePanelOpen = true;
             } else if (!isMobilePanelOpen) {
-                uiPanel.style.transform = `translateY(${uiPanel.offsetHeight - 40}px)`;
+                uiPanel.style.transform = `translateY(${uiPanel.offsetHeight - 50}px)`;
             }
         });
 
@@ -737,30 +712,30 @@
             if (data.mainAlm) mainTxt += " (Alm.)";
             
             document.getElementById('info-name').textContent = mainTxt;
-            document.getElementById('info-detail').textContent = data.birthYear ? `Tahun Lahir: ${data.birthYear}` : 'Tahun lahir tidak diketahui';
+            document.getElementById('info-detail').textContent = data.birthYear ? `Tahun Lahir: ${data.birthYear}` : 'Tahun lahir tidak tercatat';
             
-            const selector = document.getElementById('spouse-selector');
-            selector.innerHTML = '';
+            const tabsContainer = document.getElementById('spouse-tabs-container');
+            tabsContainer.innerHTML = '';
             const spouses = data.spouses || [];
             
             if (spouses.length === 0) {
-                selector.style.display = 'none';
+                document.getElementById('spouse-container-box').style.display = 'none';
                 document.getElementById('spouse-info-box').style.display = 'none';
             } else {
-                selector.style.display = 'block';
+                document.getElementById('spouse-container-box').style.display = 'block';
                 document.getElementById('spouse-info-box').style.display = 'block';
                 
+                const activeIdx = activeSpouseIndices[data.id] || 0;
                 spouses.forEach((sp, idx) => {
-                    const opt = document.createElement('option');
-                    opt.value = idx;
-                    opt.textContent = `Pasangan ${idx + 1}: ${sp.name || 'Tanpa Nama'}`;
-                    if (idx === (activeSpouseIndices[data.id] || 0)) {
-                        opt.selected = true;
-                    }
-                    selector.appendChild(opt);
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = `px-3.5 py-2 rounded-xl text-xs font-extrabold transition shadow-sm ${idx === activeIdx ? 'bg-blue-700 text-white shadow-md' : 'bg-white text-gray-800 border-2 border-gray-300 hover:bg-gray-100'}`;
+                    btn.textContent = `Istri ${idx + 1}: ${sp.name || 'Tanpa Nama'}`;
+                    btn.onclick = () => switchActiveSpouse(idx);
+                    tabsContainer.appendChild(btn);
                 });
 
-                updateSpouseInfoPanel(data, activeSpouseIndices[data.id] || 0);
+                updateSpouseInfoPanel(data, activeIdx);
             }
             
             toggleMobilePanel(true);
@@ -771,7 +746,9 @@
             activeSpouseIndices[selectedNodeId] = parseInt(index);
             updateTree();
             const node = familyData.find(n => n.id === selectedNodeId);
-            if (node) updateSpouseInfoPanel(node, parseInt(index));
+            if (node) {
+                selectNode(node); 
+            }
         };
 
         function updateSpouseInfoPanel(node, idx) {
@@ -782,7 +759,7 @@
             let spouseTxt = sp.name;
             if (sp.spouseAlm) spouseTxt += " (Alm.)";
             document.getElementById('info-spouse-name').textContent = spouseTxt;
-            document.getElementById('info-spouse-detail').textContent = sp.spouseBirthYear ? `Tahun Lahir: ${sp.spouseBirthYear}` : 'Tahun lahir tidak diketahui';
+            document.getElementById('info-spouse-detail').textContent = sp.spouseBirthYear ? `Tahun Lahir: ${sp.spouseBirthYear}` : 'Tahun lahir tidak tercatat';
         }
 
         function openModal(action) {
@@ -807,7 +784,6 @@
                 childSpouseSection.style.display = 'none';
                 editSiblingSection.style.display = 'none';
                 nameInput.setAttribute('required', 'true');
-                spouseNameInput.removeAttribute('required');
             } else if (action === 'child') {
                 const parentNode = familyData.find(n => n.id === selectedNodeId);
                 title.textContent = `Tambah Anak dari ${parentNode.name}`;
@@ -816,7 +792,6 @@
                 childSpouseSection.style.display = 'block';
                 editSiblingSection.style.display = 'none';
                 nameInput.setAttribute('required', 'true');
-                spouseNameInput.removeAttribute('required');
 
                 const childSpouseSelect = document.getElementById('childSpouseIndex');
                 if (parentNode && parentNode.spouses && parentNode.spouses.length > 0) {
@@ -824,10 +799,8 @@
                     parentNode.spouses.forEach((sp, idx) => {
                         const opt = document.createElement('option');
                         opt.value = idx;
-                        opt.textContent = `Pasangan ${idx + 1}: ${sp.name || 'Tanpa Nama'}`;
-                        if (idx === (activeSpouseIndices[parentNode.id] || 0)) {
-                            opt.selected = true;
-                        }
+                        opt.textContent = `Istri ${idx + 1}: ${sp.name || 'Tanpa Nama'}`;
+                        if (idx === (activeSpouseIndices[parentNode.id] || 0)) opt.selected = true;
                         childSpouseSelect.appendChild(opt);
                     });
                 } else {
@@ -839,15 +812,13 @@
                 spouseSection.style.display = 'block';
                 childSpouseSection.style.display = 'none';
                 editSiblingSection.style.display = 'none';
-                nameInput.removeAttribute('required');
                 spouseNameInput.setAttribute('required', 'true');
             } else if (action === 'edit') {
-                title.textContent = 'Edit Data Keluarga';
+                title.textContent = 'Ubah Data Keluarga';
                 mainSection.style.display = 'block';
                 spouseSection.style.display = 'block';
                 childSpouseSection.style.display = 'none';
                 nameInput.setAttribute('required', 'true');
-                spouseNameInput.removeAttribute('required');
                 
                 const node = familyData.find(n => n.id === selectedNodeId);
                 nameInput.value = node.name || '';
@@ -864,7 +835,6 @@
                     });
                     const currentIdx = sameMotherSiblings.findIndex(n => n.id === node.id);
                     document.getElementById('editSiblingPosition').value = currentIdx !== -1 ? currentIdx + 1 : 1;
-                    document.getElementById('editSiblingPosition').max = sameMotherSiblings.length;
                 } else {
                     editSiblingSection.style.display = 'none';
                 }
@@ -970,7 +940,6 @@
                             });
 
                             const oldIndex = sameMotherSiblings.findIndex(n => n.id === node.id);
-                            
                             if (oldIndex !== -1 && targetPosition >= 0 && targetPosition < sameMotherSiblings.length && oldIndex !== targetPosition) {
                                 const [movedItem] = sameMotherSiblings.splice(oldIndex, 1);
                                 sameMotherSiblings.splice(targetPosition, 0, movedItem);
@@ -980,13 +949,11 @@
                                     const sIdx = n.parentSpouseIndex !== undefined ? n.parentSpouseIndex : 0;
                                     return sIdx !== mySpouseIdx;
                                 });
-                                
                                 familyData = otherData;
                                 familyData.push(...sameMotherSiblings); 
                             }
                         }
                     }
-
                     selectNode(familyData[nodeIndex]); 
                 }
             }
@@ -1002,7 +969,7 @@
             if (!selectedNodeId) return;
             const node = familyData.find(n => n.id === selectedNodeId);
             
-            if(confirm(`Yakin hapus "${node.name}" beserta keturunannya?`)) {
+            if(confirm(`Yakin ingin menghapus data "${node.name}" beserta seluruh keturunannya?`)) {
                 const getDescendantIds = (parentId) => {
                     let ids = [parentId];
                     const children = familyData.filter(n => n.parentId === parentId);
@@ -1019,16 +986,16 @@
 
                 selectedNodeId = null;
                 document.getElementById('selected-info').classList.add('hidden');
-                
                 updateTree();
                 syncToCloud(); 
+                showToast("Data berhasil dihapus");
             }
         }
         window.confirmDelete = confirmDelete;
 
         function resetView() {
-            const cw = document.getElementById('tree-container').clientWidth;
-            const ch = document.getElementById('tree-container').clientHeight;
+            const cw = container.clientWidth;
+            const ch = container.clientHeight;
             const yOffset = window.innerWidth < 768 ? ch * 0.15 : 100;
             svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity.translate(cw / 2, yOffset).scale(1));
         }
@@ -1041,10 +1008,9 @@
             setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
         }
 
-        // --- DOWNLOAD IMAGE ---
         function downloadTreeImage() {
-            if (familyData.length === 0) return showToast("Kosong!");
-            showToast("Memproses gambar...");
+            if (familyData.length === 0) return showToast("Belum ada data untuk diunduh!");
+            showToast("Sedang memproses gambar...");
             const svgElement = document.querySelector('#tree-container svg');
             const gElement = svgElement.querySelector('g');
             const bbox = gElement.getBBox();
@@ -1055,7 +1021,7 @@
             clone.querySelector('g').setAttribute('transform', `translate(${-bbox.x + margin}, ${-bbox.y + margin})`);
 
             const styleEl = document.createElement('style');
-            styleEl.textContent = `.link{fill:none;stroke:#cbd5e1;stroke-width:3px}.text-main-name{font-weight:bold;font-size:13px;fill:#fff;text-anchor:middle;font-family:Arial,sans-serif}.text-spouse-name{font-weight:bold;font-size:13px;fill:#1f2937;text-anchor:middle;font-family:Arial,sans-serif}.text-main-detail{font-size:10px;fill:#dbeafe;text-anchor:middle;font-family:Arial,sans-serif}.text-spouse-detail{font-size:10px;fill:#6b7280;text-anchor:middle;font-family:Arial,sans-serif}.couple-link{stroke:#cbd5e1;stroke-width:3px}`;
+            styleEl.textContent = `.link{fill:none;stroke:#64748b;stroke-width:3.5px}.text-main-name{font-weight:bold;font-size:14px;fill:#fff;text-anchor:middle;font-family:Arial,sans-serif}.text-spouse-name{font-weight:bold;font-size:14px;fill:#0f172a;text-anchor:middle;font-family:Arial,sans-serif}.text-main-detail{font-size:11px;fill:#eff6ff;text-anchor:middle;font-family:Arial,sans-serif}.text-spouse-detail{font-size:11px;fill:#475569;text-anchor:middle;font-family:Arial,sans-serif}.couple-link{stroke:#64748b;stroke-width:3.5px}`;
             clone.insertBefore(styleEl, clone.firstChild);
 
             const svgString = new XMLSerializer().serializeToString(clone);
@@ -1071,17 +1037,16 @@
                 ctx.scale(scale, scale); ctx.drawImage(img, 0, 0);
                 
                 const link = document.createElement('a');
-                link.download = 'Silsilah_High_Res.png';
+                link.download = 'Silsilah_Keluarga.png';
                 link.href = canvas.toDataURL('image/png');
                 link.click();
                 DOMURL.revokeObjectURL(url);
-                showToast("Berhasil diunduh!");
+                showToast("Gambar berhasil diunduh!");
             };
             img.src = url;
         }
         window.downloadTreeImage = downloadTreeImage;
 
-        // --- CLOUD FIREBASE ---
         let db, auth, docRef;
         window.initialViewDone = false;
 
@@ -1098,7 +1063,6 @@
                 };
 
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-silsilah-id';
-
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app); db = getFirestore(app);
                 
@@ -1126,11 +1090,10 @@
                         setTimeout(resetView, 300);
                         window.initialViewDone = true;
                     }
-                    if(cloudStatus) { cloudStatus.textContent = 'Cloud Aktif ☁️'; cloudStatus.className = 'text-[10px] md:text-xs bg-green-100/80 text-green-700 px-2 py-0.5 rounded-full'; }
-                }, (error) => {
-                    if(cloudStatus) { cloudStatus.textContent = 'Terputus'; cloudStatus.className = 'text-[10px] md:text-xs bg-red-100/80 text-red-700 px-2 py-0.5 rounded-full'; }
+                    if(cloudStatus) { cloudStatus.textContent = 'Cloud Aktif ☁️'; cloudStatus.className = 'text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold shadow-sm'; }
+                }, () => {
+                    if(cloudStatus) { cloudStatus.textContent = 'Terputus'; cloudStatus.className = 'text-xs bg-red-100 text-red-800 px-3 py-1 rounded-full font-bold'; }
                 });
-
             } catch (error) {
                 if(cloudStatus) cloudStatus.textContent = 'Gagal Koneksi';
             }
