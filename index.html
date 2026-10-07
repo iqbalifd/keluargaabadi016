@@ -38,10 +38,10 @@
         .node-spouse { rx: 14; ry: 14; }
         .node { transition: transform 0.2s ease; }
         .node:hover { transform: scale(1.02); }
-        .text-main-name { font-weight: bold; font-size: 14px; fill: #ffffff; text-anchor: middle; pointer-events: none; }
-        .text-spouse-name { font-weight: bold; font-size: 14px; fill: #1f2937; text-anchor: middle; pointer-events: none; }
-        .text-main-detail { font-size: 11px; fill: #dbeafe; text-anchor: middle; pointer-events: none; }
-        .text-spouse-detail { font-size: 11px; fill: #6b7280; text-anchor: middle; pointer-events: none; }
+        .text-main-name { font-weight: bold; font-size: 13px; fill: #ffffff; text-anchor: middle; pointer-events: none; }
+        .text-spouse-name { font-weight: bold; font-size: 13px; fill: #1f2937; text-anchor: middle; pointer-events: none; }
+        .text-main-detail { font-size: 10px; fill: #dbeafe; text-anchor: middle; pointer-events: none; }
+        .text-spouse-detail { font-size: 10px; fill: #6b7280; text-anchor: middle; pointer-events: none; }
         .couple-link { stroke: #9ca3af; stroke-width: 3px; }
 
         /* Modal form */
@@ -165,18 +165,14 @@
                 
                 <div class="bg-gradient-to-br from-blue-50 to-white p-4 rounded-xl border border-blue-100 mb-5 shadow-sm">
                     <h3 class="text-xs font-bold text-blue-600 mb-3 uppercase tracking-wider">Data Garis Keturunan Utama</h3>
-                    <div class="mb-4">
+                    <div class="mb-3">
                         <label class="block text-gray-700 text-sm font-semibold mb-1" for="name">Nama Lengkap *</label>
                         <input class="shadow-sm appearance-none border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" id="name" type="text" placeholder="Misal: Budi Santoso" required>
                     </div>
                     
-                    <div class="mb-4">
-                        <label class="block text-gray-700 text-sm font-semibold mb-1" for="mainStatus">Status Kehidupan</label>
-                        <select class="shadow-sm border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all" id="mainStatus">
-                            <option value="hidup">Masih Hidup</option>
-                            <option value="alm">Wafat (Laki-laki - alm.)</option>
-                            <option value="almh">Wafat (Perempuan - almh.)</option>
-                        </select>
+                    <div class="mb-3 flex items-center gap-2 bg-white p-2.5 rounded-lg border border-gray-200">
+                        <input type="checkbox" id="mainAlm" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300">
+                        <label for="mainAlm" class="text-sm text-gray-700 font-medium cursor-pointer">Sudah Almarhum / Almarhumah</label>
                     </div>
 
                     <div>
@@ -187,18 +183,14 @@
 
                 <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6 shadow-sm">
                     <h3 class="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Data Suami / Istri (Opsional)</h3>
-                    <div class="mb-4">
+                    <div class="mb-3">
                         <label class="block text-gray-700 text-sm font-semibold mb-1" for="spouseName">Nama Pasangan</label>
                         <input class="shadow-sm appearance-none border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all" id="spouseName" type="text" placeholder="Biarkan kosong jika belum ada">
                     </div>
                     
-                    <div class="mb-4">
-                        <label class="block text-gray-700 text-sm font-semibold mb-1" for="spouseStatus">Status Kehidupan Pasangan</label>
-                        <select class="shadow-sm border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white transition-all" id="spouseStatus">
-                            <option value="hidup">Masih Hidup</option>
-                            <option value="alm">Wafat (Laki-laki - alm.)</option>
-                            <option value="almh">Wafat (Perempuan - almh.)</option>
-                        </select>
+                    <div class="mb-3 flex items-center gap-2 bg-white p-2.5 rounded-lg border border-gray-200">
+                        <input type="checkbox" id="spouseAlm" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300">
+                        <label for="spouseAlm" class="text-sm text-gray-700 font-medium cursor-pointer">Pasangan Sudah Almarhum / Almarhumah</label>
                     </div>
 
                     <div>
@@ -231,8 +223,8 @@
 
         // --- KONFIGURASI VISUAL D3 ---
         const container = document.getElementById('tree-container');
-        const rectWidth = 140;
-        const rectHeight = 60;
+        const baseRectWidth = 150;
+        const rectHeight = 65;
         const coupleGap = 16; 
         
         const svg = d3.select("#tree-container").append("svg")
@@ -261,22 +253,14 @@
         svg.call(zoom);
         
         const treeLayout = d3.tree()
-            .nodeSize([rectWidth * 2 + 60, rectHeight + 80])
+            .nodeSize([baseRectWidth * 2 + 80, rectHeight + 90])
             .separation((a, b) => a.parent == b.parent ? 1 : 1.1);
 
         // --- FUNGSI FORMAT NAMA & STATUS ---
-        function truncateText(text, length) {
-            if (!text) return "";
-            if (text.length <= length) return text;
-            return text.substring(0, length) + "...";
-        }
-
-        function formatNameWithStatus(name, status) {
-            if (!name) return "";
-            let formattedName = truncateText(name, 14);
-            if (status === 'alm') formattedName += " (alm.)";
-            if (status === 'almh') formattedName += " (almh.)";
-            return formattedName;
+        function calculateBoxWidth(name) {
+            if (!name) return baseRectWidth;
+            const approxWidth = name.length * 8 + 40;
+            return Math.max(baseRectWidth, approxWidth);
         }
 
         // --- RENDER POHON SILSILAH ---
@@ -318,31 +302,43 @@
                     const group = d3.select(this);
                     const hasSpouse = !!d.data.spouseName;
                     const isSelected = selectedNodeId === d.data.id;
-                    const mainX = hasSpouse ? -(rectWidth + (coupleGap/2)) : -(rectWidth / 2);
+
+                    const mainWidth = calculateBoxWidth(d.data.name);
+                    const spouseWidth = hasSpouse ? calculateBoxWidth(d.data.spouseName) : 0;
+                    
+                    const mainX = hasSpouse ? -(mainWidth + (coupleGap/2)) : -(mainWidth / 2);
                     
                     // KOTAK UTAMA (BIRU)
                     group.append("rect")
                         .attr("class", "node-rect node-main")
                         .attr("x", mainX)
                         .attr("y", -(rectHeight / 2))
-                        .attr("width", rectWidth)
+                        .attr("width", mainWidth)
                         .attr("height", rectHeight)
                         .attr("fill", "url(#grad-main)")
                         .attr("filter", isSelected ? "url(#drop-shadow-active)" : "url(#drop-shadow)")
                         .attr("stroke", isSelected ? "#ffffff" : "rgba(255,255,255,0.3)")
                         .attr("stroke-width", isSelected ? "3px" : "1px");
 
+                    // Teks Nama Utama
                     group.append("text")
                         .attr("class", "text-main-name")
-                        .attr("x", mainX + (rectWidth/2))
-                        .attr("y", -5)
-                        .text(formatNameWithStatus(d.data.name, d.data.mainStatus));
+                        .attr("x", mainX + (mainWidth/2))
+                        .attr("y", -10)
+                        .text(d.data.name || "");
+
+                    // Teks Keterangan di bawah Nama (Alm & Tahun Lahir)
+                    let mainDetail = "";
+                    if (d.data.mainAlm) mainDetail += "Almarhum(ah)";
+                    if (d.data.birthYear) {
+                        mainDetail += mainDetail ? ` • ${d.data.birthYear}` : `Lahir: ${d.data.birthYear}`;
+                    }
 
                     group.append("text")
                         .attr("class", "text-main-detail")
-                        .attr("x", mainX + (rectWidth/2))
-                        .attr("y", 15)
-                        .text(d.data.birthYear ? `Lahir: ${d.data.birthYear}` : "");
+                        .attr("x", mainX + (mainWidth/2))
+                        .attr("y", 10)
+                        .text(mainDetail);
 
                     // KOTAK PASANGAN (PUTIH)
                     if (hasSpouse) {
@@ -350,7 +346,7 @@
 
                         group.append("line")
                             .attr("class", "couple-link")
-                            .attr("x1", mainX + rectWidth)
+                            .attr("x1", mainX + mainWidth)
                             .attr("y1", 0)
                             .attr("x2", spouseX)
                             .attr("y2", 0);
@@ -359,7 +355,7 @@
                             .attr("class", "node-rect node-spouse")
                             .attr("x", spouseX)
                             .attr("y", -(rectHeight / 2))
-                            .attr("width", rectWidth)
+                            .attr("width", spouseWidth)
                             .attr("height", rectHeight)
                             .attr("fill", "url(#grad-spouse)")
                             .attr("filter", isSelected ? "url(#drop-shadow-active)" : "url(#drop-shadow)")
@@ -368,15 +364,21 @@
 
                         group.append("text")
                             .attr("class", "text-spouse-name")
-                            .attr("x", spouseX + (rectWidth/2))
-                            .attr("y", -5)
-                            .text(formatNameWithStatus(d.data.spouseName, d.data.spouseStatus));
+                            .attr("x", spouseX + (spouseWidth/2))
+                            .attr("y", -10)
+                            .text(d.data.spouseName || "");
+
+                        let spouseDetail = "";
+                        if (d.data.spouseAlm) spouseDetail += "Almarhum(ah)";
+                        if (d.data.spouseBirthYear) {
+                            spouseDetail += spouseDetail ? ` • ${d.data.spouseBirthYear}` : `Lahir: ${d.data.spouseBirthYear}`;
+                        }
 
                         group.append("text")
                             .attr("class", "text-spouse-detail")
-                            .attr("x", spouseX + (rectWidth/2))
-                            .attr("y", 15)
-                            .text(d.data.spouseBirthYear ? `Lahir: ${d.data.spouseBirthYear}` : "");
+                            .attr("x", spouseX + (spouseWidth/2))
+                            .attr("y", 10)
+                            .text(spouseDetail);
                     }
                 });
 
@@ -457,14 +459,19 @@
             updateTree(); 
 
             document.getElementById('selected-info').classList.remove('hidden');
-            document.getElementById('info-name').textContent = formatNameWithStatus(data.name, data.mainStatus);
-            document.getElementById('info-detail').textContent = data.birthYear ? `Lahir: ${data.birthYear}` : 'Tahun lahir tidak diketahui';
+            
+            let mainTxt = data.name;
+            if(data.mainAlm) mainTxt += " (Almarhum/ah)";
+            document.getElementById('info-name').textContent = mainTxt;
+            document.getElementById('info-detail').textContent = data.birthYear ? `Tahun Lahir: ${data.birthYear}` : 'Tahun lahir tidak diketahui';
             
             const spouseBox = document.getElementById('spouse-info-box');
             if (data.spouseName) {
                 spouseBox.style.display = 'block';
-                document.getElementById('info-spouse-name').textContent = formatNameWithStatus(data.spouseName, data.spouseStatus);
-                document.getElementById('info-spouse-detail').textContent = data.spouseBirthYear ? `Lahir: ${data.spouseBirthYear}` : 'Tahun lahir tidak diketahui';
+                let spouseTxt = data.spouseName;
+                if(data.spouseAlm) spouseTxt += " (Almarhum/ah)";
+                document.getElementById('info-spouse-name').textContent = spouseTxt;
+                document.getElementById('info-spouse-detail').textContent = data.spouseBirthYear ? `Tahun Lahir: ${data.spouseBirthYear}` : 'Tahun lahir tidak diketahui';
             } else {
                 spouseBox.style.display = 'none';
             }
@@ -502,10 +509,10 @@
                 title.textContent = 'Edit Data Keluarga';
                 const node = familyData.find(n => n.id === selectedNodeId);
                 document.getElementById('name').value = node.name || '';
-                document.getElementById('mainStatus').value = node.mainStatus || 'hidup';
+                document.getElementById('mainAlm').checked = !!node.mainAlm;
                 document.getElementById('birthYear').value = node.birthYear || '';
                 document.getElementById('spouseName').value = node.spouseName || '';
-                document.getElementById('spouseStatus').value = node.spouseStatus || 'hidup';
+                document.getElementById('spouseAlm').checked = !!node.spouseAlm;
                 document.getElementById('spouseBirthYear').value = node.spouseBirthYear || '';
             }
             setTimeout(() => document.getElementById('name').focus(), 100);
@@ -521,25 +528,25 @@
             event.preventDefault();
             const action = document.getElementById('form-action').value;
             const name = document.getElementById('name').value;
-            const mainStatus = document.getElementById('mainStatus').value;
+            const mainAlm = document.getElementById('mainAlm').checked;
             const birthYear = document.getElementById('birthYear').value;
             const spouseName = document.getElementById('spouseName').value;
-            const spouseStatus = document.getElementById('spouseStatus').value;
+            const spouseAlm = document.getElementById('spouseAlm').checked;
             const spouseBirthYear = document.getElementById('spouseBirthYear').value;
 
             if (action === 'root') {
-                familyData.push({ id: nextId.toString(), parentId: null, name, mainStatus, birthYear, spouseName, spouseStatus, spouseBirthYear });
+                familyData.push({ id: nextId.toString(), parentId: null, name, mainAlm, birthYear, spouseName, spouseAlm, spouseBirthYear });
                 selectNode(familyData[familyData.length - 1]); 
                 nextId++;
             } 
             else if (action === 'child' && selectedNodeId) {
-                familyData.push({ id: nextId.toString(), parentId: selectedNodeId, name, mainStatus, birthYear, spouseName, spouseStatus, spouseBirthYear });
+                familyData.push({ id: nextId.toString(), parentId: selectedNodeId, name, mainAlm, birthYear, spouseName, spouseAlm, spouseBirthYear });
                 nextId++;
             }
             else if (action === 'edit' && selectedNodeId) {
                 const nodeIndex = familyData.findIndex(n => n.id === selectedNodeId);
                 if (nodeIndex !== -1) {
-                    familyData[nodeIndex] = { ...familyData[nodeIndex], name, mainStatus, birthYear, spouseName, spouseStatus, spouseBirthYear };
+                    familyData[nodeIndex] = { ...familyData[nodeIndex], name, mainAlm, birthYear, spouseName, spouseAlm, spouseBirthYear };
                     selectNode(familyData[nodeIndex]); 
                 }
             }
@@ -604,7 +611,7 @@
             clone.querySelector('g').setAttribute('transform', `translate(${-bbox.x + margin}, ${-bbox.y + margin})`);
 
             const styleEl = document.createElement('style');
-            styleEl.textContent = `.link{fill:none;stroke:#cbd5e1;stroke-width:3px}.text-main-name{font-weight:bold;font-size:14px;fill:#fff;text-anchor:middle;font-family:Arial,sans-serif}.text-spouse-name{font-weight:bold;font-size:14px;fill:#1f2937;text-anchor:middle;font-family:Arial,sans-serif}.text-main-detail{font-size:11px;fill:#dbeafe;text-anchor:middle;font-family:Arial,sans-serif}.text-spouse-detail{font-size:11px;fill:#6b7280;text-anchor:middle;font-family:Arial,sans-serif}.couple-link{stroke:#cbd5e1;stroke-width:3px}`;
+            styleEl.textContent = `.link{fill:none;stroke:#cbd5e1;stroke-width:3px}.text-main-name{font-weight:bold;font-size:13px;fill:#fff;text-anchor:middle;font-family:Arial,sans-serif}.text-spouse-name{font-weight:bold;font-size:13px;fill:#1f2937;text-anchor:middle;font-family:Arial,sans-serif}.text-main-detail{font-size:10px;fill:#dbeafe;text-anchor:middle;font-family:Arial,sans-serif}.text-spouse-detail{font-size:10px;fill:#6b7280;text-anchor:middle;font-family:Arial,sans-serif}.couple-link{stroke:#cbd5e1;stroke-width:3px}`;
             clone.insertBefore(styleEl, clone.firstChild);
 
             const svgString = new XMLSerializer().serializeToString(clone);
@@ -637,7 +644,6 @@
         async function initCloud() {
             const cloudStatus = document.getElementById('cloud-status');
             try {
-                // Menggunakan konfigurasi Firebase Anda
                 const firebaseConfig = {
                     apiKey: "AIzaSyBLxKcMg9anSKgGiref3NQDdm9AZWta6xI",
                     authDomain: "keluargaabadi016.firebaseapp.com",
