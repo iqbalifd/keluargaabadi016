@@ -1,0 +1,117 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f3f4f6;
+    margin: 0;
+    overflow: hidden; 
+}
+
+#tree-container {
+    width: 100vw;
+    height: 100vh;
+    background-color: #f8fafc;
+    background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+    background-size: 24px 24px;
+    cursor: grab;
+    touch-action: none; 
+}
+
+#tree-container:active {
+    cursor: grabbing;
+}
+
+.link { 
+    fill: none; 
+    stroke: #94a3b8; 
+    stroke-width: 3.5px; 
+}
+
+.node-rect { 
+    cursor: pointer; 
+    transition: stroke 0.2s; 
+}
+
+.node-main { 
+    rx: 16; 
+    ry: 16; 
+}
+
+.node-spouse { 
+    rx: 16; 
+    ry: 16; 
+}
+
+.text-main-name { 
+    font-weight: bold; 
+    font-size: 14px; 
+    fill: #ffffff; 
+    text-anchor: middle; 
+    pointer-events: none; 
+}
+
+.text-spouse-name { 
+    font-weight: bold; 
+    font-size: 14px; 
+    fill: #0f172a; 
+    text-anchor: middle; 
+    pointer-events: none; 
+}
+
+.text-main-detail { 
+    font-size: 11px; 
+    fill: #eff6ff; 
+    text-anchor: middle; 
+    pointer-events: none; 
+}
+
+.text-spouse-detail { 
+    font-size: 11px; 
+    fill: #475569; 
+    text-anchor: middle; 
+    pointer-events: none; 
+}
+
+.couple-link { 
+    stroke: #64748b; 
+    stroke-width: 3.5px; 
+}
+
+.collapse-btn { 
+    cursor: pointer; 
+}
+
+#member-modal {
+    display: none;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 50;
+}
+
+#toast {
+    visibility: hidden;
+    min-width: 280px;
+    background-color: #1e293b;
+    color: #fff;
+    text-align: center;
+    border-radius: 12px;
+    padding: 16px;
+    position: fixed;
+    z-index: 100;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    opacity: 0;
+    transition: opacity 0.5s, bottom 0.5s;
+}
+
+#toast.show {
+    visibility: visible;
+    opacity: 1;
+    bottom: 50px;
+}
+
+@media print {
+    body { background-color: #fff; }
+    #ui-panel, #member-modal, #toast { display: none !important; }
+}
