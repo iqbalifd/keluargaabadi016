@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Silsilah Keluarga</title>
+    <!-- Memuat Tailwind CSS untuk styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Memuat D3.js untuk visualisasi grafik pohon -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            overflow: hidden; 
+        }
+        
+        /* Area khusus untuk menggambar pohon silsilah */
+        #tree-container {
+            width: 100vw;
+            height: 100vh;
+            background-color: #f8fafc;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 24px 24px;
+            cursor: grab;
+            touch-action: none; 
+        }
+
+        #tree-container:active {
+            cursor: grabbing;
+        }
+
+        /* Style D3.js SVG */
+        .link { fill: none; stroke: #cbd5e1; stroke-width: 3px; }
+        .node-rect { cursor: pointer; transition: all 0.3s ease; }
+        .node-main { rx: 14; ry: 14; }
+        .node-spouse { rx: 14; ry: 14; }
+        .node { transition: transform 0.2s ease; }
+        .node:hover { transform: scale(1.02); }
+        .text-main-name { font-weight: bold; font-size: 14px; fill: #ffffff; text-anchor: middle; pointer-events: none; }
+        .text-spouse-name { font-weight: bold; font-size: 14px; fill: #1f2937; text-anchor: middle; pointer-events: none; }
+        .text-main-detail { font-size: 11px; fill: #dbeafe; text-anchor: middle; pointer-events: none; }
+        .text-spouse-detail { font-size: 11px; fill: #6b7280; text-anchor: middle; pointer-events: none; }
+        .couple-link { stroke: #9ca3af; stroke-width: 3px; }
+
+        /* Modal form */
+        #member-modal {
+            display: none;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 50;
+        }
+
+        /* Notifikasi Toast */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 12px;
+            position: fixed;
+            z-index: 100;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.5s, bottom 0.5s;
+        }
+
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+
+        @media print {
+            body { background-color: #fff; }
+            #ui-panel, #member-modal, #toast { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Panel UI Glassmorphism -->
+    <div id="ui-panel" class="fixed z-20 bg-white/85 backdrop-blur-md border-gray-200 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.1)] md:shadow-2xl transition-transform duration-300 bottom-0 left-0 w-full rounded-t-3xl border-t border-white/60 px-5 pb-5 pt-2 max-h-[65vh] flex flex-col md:bottom-auto md:top-6 md:left-6 md:w-[340px] md:rounded-2xl md:border md:max-h-[90vh] md:pb-6 md:pt-6 md:px-6 md:transform-none">
+        
+        <!-- Handle Swipe Mobile -->
+        <div id="mobile-handle" class="md:hidden flex justify-center mb-1 py-3 cursor-pointer w-full">
+            <div class="w-14 h-1.5 bg-gray-300 rounded-full"></div>
+        </div>
+
+        <div class="overflow-y-auto flex-1" id="panel-content">
+            <div class="flex items-center justify-between mb-1 md:mb-2">
+                <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 tracking-tight">Silsilah</h1>
+                <span id="cloud-status" class="text-[10px] md:text-xs bg-yellow-100/80 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200/50 font-semibold shadow-sm backdrop-blur-sm">⏳ Sedang sync...</span>
+            </div>
+            <p class="text-sm text-gray-500 mb-4 md:mb-6 leading-tight">Peta visual silsilah. Klik tombol di bawah untuk menambah leluhur pertama.</p>
+            
+            <div id="empty-state" class="text-center py-2 md:py-4">
+                <button onclick="openModal('root')" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl transition duration-300 shadow-lg shadow-blue-500/30 transform hover:-translate-y-0.5 text-sm md:text-base">
+                    + Tambah Leluhur Utama
+                </button>
+                <p class="text-xs text-gray-400 mt-3 font-medium tracking-wide">MULAI DARI KAKEK/NENEK BUYUT</p>
+            </div>
+
+            <!-- Info Panel -->
+            <div id="selected-info" class="hidden mt-2 pt-4 border-t border-gray-200/60">
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Keluarga Terpilih</h2>
+                
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100/50 p-3.5 rounded-xl border border-blue-200/60 mb-2 shadow-sm">
+                    <p class="text-[10px] md:text-xs text-blue-500 font-bold tracking-wide mb-1">GARIS KETURUNAN UTAMA</p>
+                    <p id="info-name" class="font-extrabold text-base md:text-lg text-blue-900">-</p>
+                    <p id="info-detail" class="text-xs md:text-sm text-blue-700 mt-0.5 md:mt-1">-</p>
+                </div>
+
+                <div id="spouse-info-box" class="bg-white/80 p-3.5 rounded-xl border border-gray-200/80 mb-4 shadow-sm">
+                    <p class="text-[10px] md:text-xs text-gray-400 font-bold tracking-wide mb-1">SUAMI / ISTRI (MENANTU)</p>
+                    <p id="info-spouse-name" class="font-extrabold text-sm md:text-md text-gray-800">-</p>
+                    <p id="info-spouse-detail" class="text-xs md:text-sm text-gray-500 mt-0.5 md:mt-1">-</p>
+                </div>
+                
+                <div class="space-y-3">
+                    <button onclick="openModal('child')" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-sm font-bold py-3 px-4 rounded-xl transition duration-300 shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 transform hover:-translate-y-0.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                        Tambah Anak
+                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="openModal('edit')" class="flex-1 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-sm font-semibold py-2.5 px-3 rounded-xl transition duration-200 shadow-sm">Edit</button>
+                        <button onclick="confirmDelete()" class="flex-1 bg-red-50 hover:bg-red-100 border border-red-100 text-red-600 text-sm font-semibold py-2.5 px-3 rounded-xl transition duration-200 shadow-sm">Hapus</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tombol Aksi Global -->
+            <div class="mt-4 pt-4 border-t border-gray-200/60 space-y-3">
+                 <button onclick="resetView()" class="w-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-bold py-2.5 px-4 rounded-xl transition duration-200 shadow-sm flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                    Tengahkan Tampilan
+                </button>
+                <button onclick="downloadTreeImage()" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-sm font-bold py-2.5 px-4 rounded-xl transition duration-300 shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 transform hover:-translate-y-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Unduh Gambar (High-Res)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Elemen Toast untuk Notifikasi -->
+    <div id="toast">Notifikasi</div>
+
+    <!-- Modal Form Tambah/Edit -->
+    <div id="member-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 backdrop-blur-sm bg-gray-900/40 transition-opacity" style="display: none;">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 md:p-8 relative max-h-[95vh] overflow-y-auto border border-white/20">
+            <button onclick="closeModal()" class="absolute top-5 right-5 text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full p-1.5 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            
+            <h2 id="modal-title" class="text-2xl font-extrabold text-gray-800 mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">Tambah Anggota</h2>
+            
+            <form id="member-form" onsubmit="handleFormSubmit(event)">
+                <input type="hidden" id="form-action"> 
+                
+                <div class="bg-gradient-to-br from-blue-50 to-white p-4 rounded-xl border border-blue-100 mb-5 shadow-sm">
+                    <h3 class="text-xs font-bold text-blue-600 mb-3 uppercase tracking-wider">Data Garis Keturunan Utama</h3>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-semibold mb-1" for="name">Nama Lengkap *</label>
+                        <input class="shadow-sm appearance-none border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" id="name" type="text" placeholder="Misal: Budi Santoso" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-semibold mb-1" for="mainStatus">Status Kehidupan</label>
+                        <select class="shadow-sm border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all" id="mainStatus">
+                            <option value="hidup">Masih Hidup</option>
+                            <option value="alm">Wafat (Laki-laki - alm.)</option>
+                            <option value="almh">Wafat (Perempuan - almh.)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700 text-sm font-semibold mb-1" for="birthYear">Tahun Lahir</label>
+                        <input class="shadow-sm appearance-none border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" id="birthYear" type="number" placeholder="Misal: 1950">
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6 shadow-sm">
+                    <h3 class="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Data Suami / Istri (Opsional)</h3>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-semibold mb-1" for="spouseName">Nama Pasangan</label>
+                        <input class="shadow-sm appearance-none border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all" id="spouseName" type="text" placeholder="Biarkan kosong jika belum ada">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-semibold mb-1" for="spouseStatus">Status Kehidupan Pasangan</label>
+                        <select class="shadow-sm border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white transition-all" id="spouseStatus">
+                            <option value="hidup">Masih Hidup</option>
+                            <option value="alm">Wafat (Laki-laki - alm.)</option>
+                            <option value="almh">Wafat (Perempuan - almh.)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700 text-sm font-semibold mb-1" for="spouseBirthYear">Tahun Lahir Pasangan</label>
+                        <input class="shadow-sm appearance-none border border-gray-300 rounded-lg w-full py-2.5 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 transition-all" id="spouseBirthYear" type="number" placeholder="Misal: 1952">
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-5 rounded-xl transition-colors focus:outline-none">Batal</button>
+                    <button type="submit" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg shadow-blue-500/30 transform hover:-translate-y-0.5 transition-all focus:outline-none">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Area Kanvas D3.js -->
+    <div id="tree-container"></div>
+
+    <!-- Seluruh Logika JavaScript -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- STATE MANAGEMENT ---
+        let familyData = []; 
+        let nextId = 1; 
+        let selectedNodeId = null; 
+
+        // --- KONFIGURASI VISUAL D3 ---
+        const container = document.getElementById('tree-container');
+        const rectWidth = 140;
+        const rectHeight = 60;
+        const coupleGap = 16; 
+        
+        const svg = d3.select("#tree-container").append("svg")
+            .attr("width", "100%")
+            .attr("height", "100%");
+        
+        const defs = svg.append("defs");
+        
+        const filter = defs.append("filter").attr("id", "drop-shadow").attr("x", "-20%").attr("y", "-20%").attr("width", "140%").attr("height", "140%");
+        filter.append("feDropShadow").attr("dx", "0").attr("dy", "5").attr("stdDeviation", "5").attr("flood-opacity", "0.1");
+
+        const filterActive = defs.append("filter").attr("id", "drop-shadow-active").attr("x", "-20%").attr("y", "-20%").attr("width", "140%").attr("height", "140%");
+        filterActive.append("feDropShadow").attr("dx", "0").attr("dy", "8").attr("stdDeviation", "8").attr("flood-color", "#3b82f6").attr("flood-opacity", "0.4");
+
+        const gradMain = defs.append("linearGradient").attr("id", "grad-main").attr("x1", "0%").attr("y1", "0%").attr("x2", "100%").attr("y2", "100%");
+        gradMain.append("stop").attr("offset", "0%").attr("stop-color", "#60a5fa"); 
+        gradMain.append("stop").attr("offset", "100%").attr("stop-color", "#2563eb"); 
+
+        const gradSpouse = defs.append("linearGradient").attr("id", "grad-spouse").attr("x1", "0%").attr("y1", "0%").attr("x2", "100%").attr("y2", "100%");
+        gradSpouse.append("stop").attr("offset", "0%").attr("stop-color", "#ffffff");
+        gradSpouse.append("stop").attr("offset", "100%").attr("stop-color", "#f3f4f6"); 
+
+        const g = svg.append("g");
+
+        const zoom = d3.zoom().scaleExtent([0.1, 3]).on("zoom", (event) => g.attr("transform", event.transform));
+        svg.call(zoom);
+        
+        const treeLayout = d3.tree()
+            .nodeSize([rectWidth * 2 + 60, rectHeight + 80])
+            .separation((a, b) => a.parent == b.parent ? 1 : 1.1);
+
+        // --- FUNGSI FORMAT NAMA & STATUS ---
+        function truncateText(text, length) {
+            if (!text) return "";
+            if (text.length <= length) return text;
+            return text.substring(0, length) + "...";
+        }
+
+        function formatNameWithStatus(name, status) {
+            if (!name) return "";
+            let formattedName = truncateText(name, 14);
+            if (status === 'alm') formattedName += " (alm.)";
+            if (status === 'almh') formattedName += " (almh.)";
+            return formattedName;
+        }
+
+        // --- RENDER POHON SILSILAH ---
+        function updateTree() {
+            g.selectAll("*").remove();
+
+            const emptyState = document.getElementById('empty-state');
+            if (familyData.length === 0) {
+                emptyState.style.display = 'block';
+                return;
+            } else {
+                emptyState.style.display = 'none';
+            }
+
+            try {
+                const root = d3.stratify().id(d => d.id).parentId(d => d.parentId)(familyData);
+                treeLayout(root);
+
+                g.selectAll(".link")
+                    .data(root.links())
+                    .enter().append("path")
+                    .attr("class", "link")
+                    .attr("d", d => {
+                        const startX = d.source.x;
+                        const startY = d.source.y + (rectHeight / 2); 
+                        const endX = d.target.x;
+                        const endY = d.target.y - (rectHeight / 2);   
+                        return `M${startX},${startY} C${startX},${(startY + endY) / 2} ${endX},${(startY + endY) / 2} ${endX},${endY}`;
+                    });
+
+                const nodeGroup = g.selectAll(".node")
+                    .data(root.descendants())
+                    .enter().append("g")
+                    .attr("class", "node")
+                    .attr("transform", d => `translate(${d.x},${d.y})`)
+                    .on("click", (event, d) => selectNode(d.data)); 
+
+                nodeGroup.each(function(d) {
+                    const group = d3.select(this);
+                    const hasSpouse = !!d.data.spouseName;
+                    const isSelected = selectedNodeId === d.data.id;
+                    const mainX = hasSpouse ? -(rectWidth + (coupleGap/2)) : -(rectWidth / 2);
+                    
+                    // KOTAK UTAMA (BIRU)
+                    group.append("rect")
+                        .attr("class", "node-rect node-main")
+                        .attr("x", mainX)
+                        .attr("y", -(rectHeight / 2))
+                        .attr("width", rectWidth)
+                        .attr("height", rectHeight)
+                        .attr("fill", "url(#grad-main)")
+                        .attr("filter", isSelected ? "url(#drop-shadow-active)" : "url(#drop-shadow)")
+                        .attr("stroke", isSelected ? "#ffffff" : "rgba(255,255,255,0.3)")
+                        .attr("stroke-width", isSelected ? "3px" : "1px");
+
+                    group.append("text")
+                        .attr("class", "text-main-name")
+                        .attr("x", mainX + (rectWidth/2))
+                        .attr("y", -5)
+                        .text(formatNameWithStatus(d.data.name, d.data.mainStatus));
+
+                    group.append("text")
+                        .attr("class", "text-main-detail")
+                        .attr("x", mainX + (rectWidth/2))
+                        .attr("y", 15)
+                        .text(d.data.birthYear ? `Lahir: ${d.data.birthYear}` : "");
+
+                    // KOTAK PASANGAN (PUTIH)
+                    if (hasSpouse) {
+                        const spouseX = coupleGap / 2;
+
+                        group.append("line")
+                            .attr("class", "couple-link")
+                            .attr("x1", mainX + rectWidth)
+                            .attr("y1", 0)
+                            .attr("x2", spouseX)
+                            .attr("y2", 0);
+
+                        group.append("rect")
+                            .attr("class", "node-rect node-spouse")
+                            .attr("x", spouseX)
+                            .attr("y", -(rectHeight / 2))
+                            .attr("width", rectWidth)
+                            .attr("height", rectHeight)
+                            .attr("fill", "url(#grad-spouse)")
+                            .attr("filter", isSelected ? "url(#drop-shadow-active)" : "url(#drop-shadow)")
+                            .attr("stroke", isSelected ? "#3b82f6" : "#e5e7eb")
+                            .attr("stroke-width", isSelected ? "3px" : "1px");
+
+                        group.append("text")
+                            .attr("class", "text-spouse-name")
+                            .attr("x", spouseX + (rectWidth/2))
+                            .attr("y", -5)
+                            .text(formatNameWithStatus(d.data.spouseName, d.data.spouseStatus));
+
+                        group.append("text")
+                            .attr("class", "text-spouse-detail")
+                            .attr("x", spouseX + (rectWidth/2))
+                            .attr("y", 15)
+                            .text(d.data.spouseBirthYear ? `Lahir: ${d.data.spouseBirthYear}` : "");
+                    }
+                });
+
+            } catch (error) {
+                console.error("Tree render error:", error);
+            }
+        }
+
+        // --- UI INTERAKSI PANEL MOBILE (SWIPE) ---
+        let isMobilePanelOpen = true;
+        const uiPanel = document.getElementById('ui-panel');
+        let dragStartY = 0, panelCurrentY = 0, isDraggingPanel = false, panelClosedY = 0;
+
+        function toggleMobilePanel(forceOpen = false) {
+            if (window.innerWidth >= 768) return; 
+            uiPanel.style.transitionDuration = ''; 
+            const closedY = uiPanel.offsetHeight - 40; 
+            if (!isMobilePanelOpen || forceOpen) {
+                uiPanel.style.transform = 'translateY(0)'; 
+                isMobilePanelOpen = true;
+            } else {
+                uiPanel.style.transform = `translateY(${closedY}px)`; 
+                isMobilePanelOpen = false;
+            }
+        }
+        window.toggleMobilePanel = toggleMobilePanel;
+
+        uiPanel.addEventListener('touchstart', (e) => {
+            if (window.innerWidth >= 768) return;
+            const isHandle = e.target.closest('#mobile-handle');
+            const isHeader = e.target.closest('h1');
+            if (isHandle || isHeader || !isMobilePanelOpen) {
+                isDraggingPanel = true;
+                dragStartY = e.touches[0].clientY;
+                panelClosedY = uiPanel.offsetHeight - 40;
+                panelCurrentY = isMobilePanelOpen ? 0 : panelClosedY;
+                uiPanel.style.transitionDuration = '0ms';
+            }
+        }, {passive: true});
+
+        uiPanel.addEventListener('touchmove', (e) => {
+            if (!isDraggingPanel) return;
+            const touchY = e.touches[0].clientY;
+            const deltaY = touchY - dragStartY;
+            let newY = panelCurrentY + deltaY;
+            if (newY < 0) newY = 0;
+            if (newY > panelClosedY) newY = panelClosedY;
+            uiPanel.style.transform = `translateY(${newY}px)`;
+        }, {passive: true});
+
+        uiPanel.addEventListener('touchend', (e) => {
+            if (!isDraggingPanel) return;
+            isDraggingPanel = false;
+            uiPanel.style.transitionDuration = '';
+            const matrix = new DOMMatrixReadOnly(window.getComputedStyle(uiPanel).transform);
+            const finalY = matrix.m42;
+            if (finalY > (panelClosedY / 2)) {
+                uiPanel.style.transform = `translateY(${panelClosedY}px)`;
+                isMobilePanelOpen = false;
+            } else {
+                uiPanel.style.transform = 'translateY(0)';
+                isMobilePanelOpen = true;
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                uiPanel.style.transform = 'none';
+                isMobilePanelOpen = true;
+            } else if (!isMobilePanelOpen) {
+                uiPanel.style.transform = `translateY(${uiPanel.offsetHeight - 40}px)`;
+            }
+        });
+
+        // --- INTERAKSI KLIK & FORM ---
+        function selectNode(data) {
+            selectedNodeId = data.id;
+            updateTree(); 
+
+            document.getElementById('selected-info').classList.remove('hidden');
+            document.getElementById('info-name').textContent = formatNameWithStatus(data.name, data.mainStatus);
+            document.getElementById('info-detail').textContent = data.birthYear ? `Lahir: ${data.birthYear}` : 'Tahun lahir tidak diketahui';
+            
+            const spouseBox = document.getElementById('spouse-info-box');
+            if (data.spouseName) {
+                spouseBox.style.display = 'block';
+                document.getElementById('info-spouse-name').textContent = formatNameWithStatus(data.spouseName, data.spouseStatus);
+                document.getElementById('info-spouse-detail').textContent = data.spouseBirthYear ? `Lahir: ${data.spouseBirthYear}` : 'Tahun lahir tidak diketahui';
+            } else {
+                spouseBox.style.display = 'none';
+            }
+            
+            toggleMobilePanel(true);
+
+            try {
+                const rootNodes = d3.stratify().id(d => d.id).parentId(d => d.parentId)(familyData);
+                const treeLayoutData = treeLayout(rootNodes);
+                const targetNode = treeLayoutData.descendants().find(n => n.id === data.id);
+                
+                if (targetNode) {
+                    const cw = document.getElementById('tree-container').clientWidth;
+                    const ch = document.getElementById('tree-container').clientHeight;
+                    const yOffset = window.innerWidth < 768 ? ch * 0.25 : ch / 2;
+                    svg.transition().duration(750).call(zoom.transform, d3.zoomIdentity.translate(cw / 2 - targetNode.x, yOffset - targetNode.y).scale(1));
+                }
+            } catch (e) {}
+        }
+
+        function openModal(action) {
+            const modal = document.getElementById('member-modal');
+            const title = document.getElementById('modal-title');
+            
+            document.getElementById('member-form').reset();
+            document.getElementById('form-action').value = action;
+            modal.style.display = 'flex';
+
+            if (action === 'root') {
+                title.textContent = 'Tambah Leluhur Utama';
+            } else if (action === 'child') {
+                const parentNode = familyData.find(n => n.id === selectedNodeId);
+                title.textContent = `Tambah Anak ${parentNode.name}`;
+            } else if (action === 'edit') {
+                title.textContent = 'Edit Data Keluarga';
+                const node = familyData.find(n => n.id === selectedNodeId);
+                document.getElementById('name').value = node.name || '';
+                document.getElementById('mainStatus').value = node.mainStatus || 'hidup';
+                document.getElementById('birthYear').value = node.birthYear || '';
+                document.getElementById('spouseName').value = node.spouseName || '';
+                document.getElementById('spouseStatus').value = node.spouseStatus || 'hidup';
+                document.getElementById('spouseBirthYear').value = node.spouseBirthYear || '';
+            }
+            setTimeout(() => document.getElementById('name').focus(), 100);
+        }
+        window.openModal = openModal;
+
+        function closeModal() {
+            document.getElementById('member-modal').style.display = 'none';
+        }
+        window.closeModal = closeModal;
+
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            const action = document.getElementById('form-action').value;
+            const name = document.getElementById('name').value;
+            const mainStatus = document.getElementById('mainStatus').value;
+            const birthYear = document.getElementById('birthYear').value;
+            const spouseName = document.getElementById('spouseName').value;
+            const spouseStatus = document.getElementById('spouseStatus').value;
+            const spouseBirthYear = document.getElementById('spouseBirthYear').value;
+
+            if (action === 'root') {
+                familyData.push({ id: nextId.toString(), parentId: null, name, mainStatus, birthYear, spouseName, spouseStatus, spouseBirthYear });
+                selectNode(familyData[familyData.length - 1]); 
+                nextId++;
+            } 
+            else if (action === 'child' && selectedNodeId) {
+                familyData.push({ id: nextId.toString(), parentId: selectedNodeId, name, mainStatus, birthYear, spouseName, spouseStatus, spouseBirthYear });
+                nextId++;
+            }
+            else if (action === 'edit' && selectedNodeId) {
+                const nodeIndex = familyData.findIndex(n => n.id === selectedNodeId);
+                if (nodeIndex !== -1) {
+                    familyData[nodeIndex] = { ...familyData[nodeIndex], name, mainStatus, birthYear, spouseName, spouseStatus, spouseBirthYear };
+                    selectNode(familyData[nodeIndex]); 
+                }
+            }
+
+            closeModal();
+            updateTree();
+            syncToCloud(); 
+            if(action === 'root') setTimeout(resetView, 100);
+        }
+        window.handleFormSubmit = handleFormSubmit;
+
+        function confirmDelete() {
+            if (!selectedNodeId) return;
+            const node = familyData.find(n => n.id === selectedNodeId);
+            
+            if(confirm(`Yakin hapus "${node.name}" beserta keturunannya?`)) {
+                const getDescendantIds = (parentId) => {
+                    let ids = [parentId];
+                    const children = familyData.filter(n => n.parentId === parentId);
+                    for (const child of children) ids = ids.concat(getDescendantIds(child.id));
+                    return ids;
+                };
+
+                const idsToDelete = getDescendantIds(selectedNodeId);
+                familyData = familyData.filter(n => !idsToDelete.includes(n.id));
+
+                selectedNodeId = null;
+                document.getElementById('selected-info').classList.add('hidden');
+                
+                updateTree();
+                syncToCloud(); 
+            }
+        }
+        window.confirmDelete = confirmDelete;
+
+        function resetView() {
+            const cw = document.getElementById('tree-container').clientWidth;
+            const ch = document.getElementById('tree-container').clientHeight;
+            const yOffset = window.innerWidth < 768 ? ch * 0.15 : 100;
+            svg.transition().duration(750).call(zoom.transform, d3.zoomIdentity.translate(cw / 2, yOffset).scale(1));
+        }
+        window.resetView = resetView;
+
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.textContent = message;
+            toast.className = "show";
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        // --- DOWNLOAD IMAGE ---
+        function downloadTreeImage() {
+            if (familyData.length === 0) return showToast("Kosong!");
+            showToast("Memproses gambar...");
+            const svgElement = document.querySelector('#tree-container svg');
+            const gElement = svgElement.querySelector('g');
+            const bbox = gElement.getBBox();
+            const margin = 100, width = bbox.width + (margin * 2), height = bbox.height + (margin * 2);
+            
+            const clone = svgElement.cloneNode(true);
+            clone.setAttribute('width', width); clone.setAttribute('height', height);
+            clone.querySelector('g').setAttribute('transform', `translate(${-bbox.x + margin}, ${-bbox.y + margin})`);
+
+            const styleEl = document.createElement('style');
+            styleEl.textContent = `.link{fill:none;stroke:#cbd5e1;stroke-width:3px}.text-main-name{font-weight:bold;font-size:14px;fill:#fff;text-anchor:middle;font-family:Arial,sans-serif}.text-spouse-name{font-weight:bold;font-size:14px;fill:#1f2937;text-anchor:middle;font-family:Arial,sans-serif}.text-main-detail{font-size:11px;fill:#dbeafe;text-anchor:middle;font-family:Arial,sans-serif}.text-spouse-detail{font-size:11px;fill:#6b7280;text-anchor:middle;font-family:Arial,sans-serif}.couple-link{stroke:#cbd5e1;stroke-width:3px}`;
+            clone.insertBefore(styleEl, clone.firstChild);
+
+            const svgString = new XMLSerializer().serializeToString(clone);
+            const img = new Image();
+            const DOMURL = window.URL || window.webkitURL || window;
+            const url = DOMURL.createObjectURL(new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' }));
+
+            img.onload = () => {
+                const scale = 3, canvas = document.createElement('canvas');
+                canvas.width = width * scale; canvas.height = height * scale;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.scale(scale, scale); ctx.drawImage(img, 0, 0);
+                
+                const link = document.createElement('a');
+                link.download = 'Silsilah_High_Res.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                DOMURL.revokeObjectURL(url);
+                showToast("Berhasil diunduh!");
+            };
+            img.src = url;
+        }
+        window.downloadTreeImage = downloadTreeImage;
+
+        // --- CLOUD FIREBASE ---
+        let db, auth, docRef;
+        window.initialViewDone = false;
+
+        async function initCloud() {
+            const cloudStatus = document.getElementById('cloud-status');
+            try {
+                // GANTI BAGIAN INI DENGAN CONFIG FIREBASE ANDA SEBELUM DI UPLOAD KE GITHUB
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+                     apiKey: "AIzaSyBLxKcMg9anSKgGiref3NQDdm9AZWta6xI",
+                     authDomain: "keluargaabadi016.firebaseapp.com",
+                     projectId: "keluargaabadi016",
+                };
+
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-silsilah-id';
+                
+                if (!firebaseConfig || firebaseConfig.apiKey === "AIzaSyBLxKcMg9anSKgGiref3NQDdm9AZWta6xI") {
+                    if(cloudStatus) cloudStatus.textContent = 'Mode Offline (Lokal)';
+                    updateTree(); resetView();
+                    return;
+                }
+
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app); db = getFirestore(app);
+                
+                const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                if (token) await signInWithCustomToken(auth, token);
+                else await signInAnonymously(auth); 
+
+                docRef = doc(db, 'artifacts', appId, 'public', 'data', 'familyTree', 'mainTree');
+
+                onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        familyData = docSnap.data().nodes || [];
+                        nextId = familyData.length > 0 ? Math.max(...familyData.map(n => parseInt(n.id))) + 1 : 1;
+                    } else familyData = [];
+                    
+                    updateTree(); 
+                    if(!window.initialViewDone && familyData.length > 0) {
+                        setTimeout(resetView, 300);
+                        window.initialViewDone = true;
+                    }
+                    if(cloudStatus) { cloudStatus.textContent = 'Cloud Aktif ☁️'; cloudStatus.className = 'text-[10px] md:text-xs bg-green-100/80 text-green-700 px-2 py-0.5 rounded-full'; }
+                }, (error) => {
+                    if(cloudStatus) { cloudStatus.textContent = 'Terputus'; cloudStatus.className = 'text-[10px] md:text-xs bg-red-100/80 text-red-700 px-2 py-0.5 rounded-full'; }
+                });
+
+            } catch (error) {
+                if(cloudStatus) cloudStatus.textContent = 'Gagal Koneksi';
+            }
+        }
+
+        async function syncToCloud() {
+            if (!auth || !auth.currentUser || !docRef) return;
+            try { await setDoc(docRef, { nodes: familyData }); } 
+            catch (error) { showToast("Gagal menyimpan ke cloud."); }
+        }
+
+        window.onload = initCloud;
+    </script>
+</body>
+</html>
