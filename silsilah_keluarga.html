@@ -639,14 +639,14 @@
             try {
                 // GANTI BAGIAN INI DENGAN CONFIG FIREBASE ANDA SEBELUM DI UPLOAD KE GITHUB
                 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-                     apiKey: "ISI_DENGAN_API_KEY_ANDA",
-                     authDomain: "ISI_DENGAN_DOMAIN_ANDA",
-                     projectId: "ISI_DENGAN_PROJECT_ID_ANDA",
+                     apiKey: "AIzaSyBLxKcMg9anSKgGiref3NQDdm9AZWta6xI",
+                     authDomain: "keluargaabadi016.firebaseapp.com",
+                     projectId: "keluargaabadi016",
                 };
 
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-silsilah-id';
                 
-                if (!firebaseConfig || firebaseConfig.apiKey === "ISI_DENGAN_API_KEY_ANDA") {
+                if (!firebaseConfig || firebaseConfig.apiKey === "AIzaSyBLxKcMg9anSKgGiref3NQDdm9AZWta6xI") {
                     if(cloudStatus) cloudStatus.textContent = 'Mode Offline (Lokal)';
                     updateTree(); resetView();
                     return;
