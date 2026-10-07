@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi Silsilah Keluarga Abadi 016</title>
+    <title>Aplikasi Silsilah Keluarga</title>
     <!-- Memuat Tailwind CSS untuk styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Memuat D3.js untuk visualisasi grafik pohon -->
@@ -92,11 +92,20 @@
 
         <div class="overflow-y-auto flex-1" id="panel-content">
             <div class="flex items-center justify-between mb-1 md:mb-2">
-                <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 tracking-tight">Keluarga Abadi 016</h1>
+                <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 tracking-tight">Silsilah</h1>
                 <span id="cloud-status" class="text-[10px] md:text-xs bg-green-100/80 text-green-700 px-2 py-0.5 rounded-full border border-green-200/50 font-semibold shadow-sm backdrop-blur-sm">Cloud Aktif ☁️</span>
             </div>
-            <p class="text-sm text-gray-500 mb-4 leading-tight">Peta visual silsilah keluarga besar.</p>
+            <p class="text-sm text-gray-500 mb-3 leading-tight">Peta visual silsilah keluarga besar.</p>
             
+            <!-- Pilihan Mode Bagan (Baru) -->
+            <div class="mb-4 bg-gray-50 border border-gray-200 p-2.5 rounded-xl">
+                <label class="block text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1.5">Mode Tampilan Bagan</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="setOrientation('horizontal')" id="btn-mode-horizontal" class="py-1.5 px-3 text-xs font-bold rounded-lg transition-all bg-blue-600 text-white shadow-sm">Horizontal (Kiri-Kanan)</button>
+                    <button onclick="setOrientation('vertical')" id="btn-mode-vertical" class="py-1.5 px-3 text-xs font-bold rounded-lg transition-all bg-white text-gray-700 border border-gray-200 hover:bg-gray-100">Vertikal (Atas-Bawah)</button>
+                </div>
+            </div>
+
             <!-- Fitur Pencarian Anggota Keluarga -->
             <div class="mb-4 relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -270,6 +279,7 @@
         let activeSpouseIndices = {}; 
         let isolatedParentId = null; 
         let isolatedSpouseIndex = null; 
+        let treeOrientation = 'horizontal'; // 'horizontal' atau 'vertical'
 
         // --- KONFIGURASI VISUAL D3 ---
         const container = document.getElementById('tree-container');
@@ -312,12 +322,30 @@
             return Math.max(baseRectWidth, approxWidth);
         }
 
-        // --- DIPERBAIKI: Hitung nomor urut anak secara spesifik per istri ---
+        // --- FUNGSI MENGUBAH MODE BAGAN ---
+        window.setOrientation = function(mode) {
+            treeOrientation = mode;
+            const btnH = document.getElementById('btn-mode-horizontal');
+            const btnV = document.getElementById('btn-mode-vertical');
+
+            if (mode === 'horizontal') {
+                btnH.className = "py-1.5 px-3 text-xs font-bold rounded-lg transition-all bg-blue-600 text-white shadow-sm";
+                btnV.className = "py-1.5 px-3 text-xs font-bold rounded-lg transition-all bg-white text-gray-700 border border-gray-200 hover:bg-gray-100";
+            } else {
+                btnV.className = "py-1.5 px-3 text-xs font-bold rounded-lg transition-all bg-blue-600 text-white shadow-sm";
+                btnH.className = "py-1.5 px-3 text-xs font-bold rounded-lg transition-all bg-white text-gray-700 border border-gray-200 hover:bg-gray-100";
+            }
+
+            updateTree();
+            resetView();
+            showToast(`Beralih ke Mode ${mode === 'horizontal' ? 'Horizontal' : 'Vertikal'}`);
+        };
+
+        // --- Hitung nomor urut anak khusus dari pasangan/istri yang sama ---
         function getChildIndexLabel(nodeData) {
             if (!nodeData.parentId) return ""; 
             const mySpouseIdx = nodeData.parentSpouseIndex !== undefined ? nodeData.parentSpouseIndex : 0;
             
-            // Filter anak-anak yang hanya memiliki parentId DAN parentSpouseIndex yang sama
             const sameMotherSiblings = familyData.filter(n => {
                 if (n.parentId !== nodeData.parentId) return false;
                 const sIdx = n.parentSpouseIndex !== undefined ? n.parentSpouseIndex : 0;
@@ -379,23 +407,40 @@
                 const root = d3.stratify().id(d => d.id).parentId(d => d.parentId)(activeData);
                 treeLayout(root);
 
+                // Render Garis Penghubung (Link) Berdasarkan Mode
                 g.selectAll(".link")
                     .data(root.links())
                     .enter().append("path")
                     .attr("class", "link")
                     .attr("d", d => {
-                        const startX = d.source.x;
-                        const startY = d.source.y + (rectHeight / 2); 
-                        const endX = d.target.x;
-                        const endY = d.target.y - (rectHeight / 2);   
-                        return `M${startX},${startY} C${startX},${(startY + endY) / 2} ${endX},${(startY + endY) / 2} ${endX},${endY}`;
+                        if (treeOrientation === 'vertical') {
+                            // Mode Atas ke Bawah
+                            const startX = d.source.y;
+                            const startY = d.source.x + (rectHeight / 2);
+                            const endX = d.target.y;
+                            const endY = d.target.x - (rectHeight / 2);
+                            return `M${startX},${startY} C${startX},${(startY + endY) / 2} ${endX},${(startY + endY) / 2} ${endX},${endY}`;
+                        } else {
+                            // Mode Kiri ke Kanan (Horizontal)
+                            const startX = d.source.x;
+                            const startY = d.source.y + (rectHeight / 2); 
+                            const endX = d.target.x;
+                            const endY = d.target.y - (rectHeight / 2);   
+                            return `M${startX},${startY} C${startX},${(startY + endY) / 2} ${endX},${(startY + endY) / 2} ${endX},${endY}`;
+                        }
                     });
 
                 const nodeGroup = g.selectAll(".node")
                     .data(root.descendants())
                     .enter().append("g")
                     .attr("class", "node")
-                    .attr("transform", d => `translate(${d.x},${d.y})`)
+                    .attr("transform", d => {
+                        if (treeOrientation === 'vertical') {
+                            return `translate(${d.y},${d.x})`;
+                        } else {
+                            return `translate(${d.x},${d.y})`;
+                        }
+                    })
                     .on("click", (event, d) => selectNode(d.data)); 
 
                 nodeGroup.each(function(d) {
@@ -885,7 +930,6 @@
                             const targetPosition = parseInt(newPosInput) - 1;
                             const mySpouseIdx = node.parentSpouseIndex !== undefined ? node.parentSpouseIndex : 0;
                             
-                            // Ambil hanya saudara kandung dari ibu/istri yang sama
                             let allSiblings = familyData.filter(n => n.parentId === node.parentId);
                             let sameMotherSiblings = allSiblings.filter(n => {
                                 const sIdx = n.parentSpouseIndex !== undefined ? n.parentSpouseIndex : 0;
@@ -898,7 +942,6 @@
                                 const [movedItem] = sameMotherSiblings.splice(oldIndex, 1);
                                 sameMotherSiblings.splice(targetPosition, 0, movedItem);
 
-                                // Rekonstruksi ulang array familyData dengan memasukkan kembali saudara seibu sesuai urutan baru
                                 let otherData = familyData.filter(n => {
                                     if (n.parentId !== node.parentId) return true;
                                     const sIdx = n.parentSpouseIndex !== undefined ? n.parentSpouseIndex : 0;
@@ -953,8 +996,9 @@
         function resetView() {
             const cw = document.getElementById('tree-container').clientWidth;
             const ch = document.getElementById('tree-container').clientHeight;
+            const xOffset = treeOrientation === 'vertical' ? 100 : cw / 2;
             const yOffset = window.innerWidth < 768 ? ch * 0.15 : 100;
-            svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity.translate(cw / 2, yOffset).scale(1));
+            svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity.translate(xOffset, yOffset).scale(1));
         }
         window.resetView = resetView;
 
