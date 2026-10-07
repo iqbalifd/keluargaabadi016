@@ -95,7 +95,7 @@
                 <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 tracking-tight">Silsilah</h1>
                 <span id="cloud-status" class="text-[10px] md:text-xs bg-yellow-100/80 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200/50 font-semibold shadow-sm backdrop-blur-sm">⏳ Sedang sync...</span>
             </div>
-            <p class="text-sm text-gray-500 mb-4 leading-tight">Peta visual silsilah. Kelola dan telusuri garis keturunan.</p>
+            <p class="text-sm text-gray-500 mb-4 leading-tight">Peta visual silsilah keluarga besar.</p>
             
             <!-- Fitur Pencarian Anggota Keluarga -->
             <div class="mb-4 relative">
@@ -106,6 +106,15 @@
                 </div>
                 <input type="text" id="search-input" oninput="handleSearch(this.value)" placeholder="Cari nama keluarga..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                 <div id="search-results" class="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-30 hidden"></div>
+            </div>
+
+            <!-- Banner Mode Filter Keluarga -->
+            <div id="filter-banner" class="hidden mb-4 bg-indigo-50 border border-indigo-200 p-3 rounded-xl flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] text-indigo-500 font-bold uppercase tracking-wide">Mode Fokus</p>
+                    <p id="filter-banner-text" class="text-xs font-bold text-indigo-900">Keluarga Bpk. ...</p>
+                </div>
+                <button onclick="resetFamilyFilter()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm">Reset Silsilah</button>
             </div>
 
             <div id="empty-state" class="text-center py-2 md:py-4">
@@ -132,6 +141,10 @@
                 </div>
                 
                 <div class="space-y-3">
+                    <button onclick="isolateFamilyView()" class="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white text-sm font-bold py-2.5 px-4 rounded-xl transition duration-300 shadow-md flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                        Lihat Keluarga Ini Saja (Di Bagan)
+                    </button>
                     <button onclick="openModal('child')" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-sm font-bold py-3 px-4 rounded-xl transition duration-300 shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 transform hover:-translate-y-0.5">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
                         Tambah Anak
@@ -229,6 +242,7 @@
         let familyData = []; 
         let nextId = 1; 
         let selectedNodeId = null; 
+        let isolatedParentId = null; // ID untuk mode lihat keluarga ini saja di bagan
 
         // --- KONFIGURASI VISUAL D3 ---
         const container = document.getElementById('tree-container');
@@ -295,7 +309,21 @@
             }
 
             try {
-                const root = d3.stratify().id(d => d.id).parentId(d => d.parentId)(familyData);
+                // Tentukan data yang dirender (Full Tree atau Isolate Family View)
+                let activeData = familyData;
+                if (isolatedParentId) {
+                    const parentNode = familyData.find(n => n.id === isolatedParentId);
+                    const childrenNodes = familyData.filter(n => n.parentId === isolatedParentId);
+                    if (parentNode) {
+                        // Buat salinan parent dengan parentId = null agar jadi akar di D3
+                        const rootCopy = { ...parentNode, parentId: null };
+                        // Buat salinan anak-anak dengan parentId mengarah ke rootCopy.id
+                        const childrenCopies = childrenNodes.map(c => ({ ...c, parentId: rootCopy.id }));
+                        activeData = [rootCopy, ...childrenCopies];
+                    }
+                }
+
+                const root = d3.stratify().id(d => d.id).parentId(d => d.parentId)(activeData);
                 treeLayout(root);
 
                 g.selectAll(".link")
@@ -339,14 +367,13 @@
                         .attr("stroke", isSelected ? "#ffffff" : "rgba(255,255,255,0.3)")
                         .attr("stroke-width", isSelected ? "3px" : "1px");
 
-                    // Teks Nama Utama (Di atas)
+                    // Teks Nama Utama
                     group.append("text")
                         .attr("class", "text-main-name")
                         .attr("x", mainX + (mainWidth/2))
                         .attr("y", -12)
                         .text(d.data.name || "");
 
-                    // Keterangan di bawah Nama (Nomor Anak, Almarhum, Tahun Lahir)
                     let details = [];
                     const childNumLabel = getChildIndexLabel(d.data);
                     if (childNumLabel) details.push(childNumLabel);
@@ -404,6 +431,29 @@
             }
         }
 
+        // --- FITUR ISOLASI KELUARGA (LIHAT KELUARGA INI SAJA DI BAGAN) ---
+        window.isolateFamilyView = function() {
+            if (!selectedNodeId) return;
+            const node = familyData.find(n => n.id === selectedNodeId);
+            if (!node) return;
+
+            isolatedParentId = node.id;
+            document.getElementById('filter-banner').classList.remove('hidden');
+            document.getElementById('filter-banner-text').textContent = `Keluarga ${node.name}`;
+            
+            updateTree();
+            resetView();
+            showToast(`Menampilkan keluarga ${node.name} di bagan`);
+        };
+
+        window.resetFamilyFilter = function() {
+            isolatedParentId = null;
+            document.getElementById('filter-banner').classList.add('hidden');
+            updateTree();
+            resetView();
+            showToast("Kembali ke silsilah lengkap");
+        };
+
         // --- FITUR PENCARIAN ---
         window.handleSearch = function(query) {
             const resultsBox = document.getElementById('search-results');
@@ -439,6 +489,10 @@
         window.focusNode = function(id) {
             const nodeData = familyData.find(n => n.id === id);
             if (nodeData) {
+                // Jika sedang di mode filter dan node di luar filter, reset filter dulu
+                if (isolatedParentId && nodeData.parentId !== isolatedParentId && nodeData.id !== isolatedParentId) {
+                    resetFamilyFilter();
+                }
                 selectNode(nodeData);
                 document.getElementById('search-results').classList.add('hidden');
                 document.getElementById('search-input').value = '';
@@ -540,7 +594,18 @@
             toggleMobilePanel(true);
 
             try {
-                const rootNodes = d3.stratify().id(d => d.id).parentId(d => d.parentId)(familyData);
+                // Tentukan root berdasarkan mode aktif saat ini
+                let activeData = familyData;
+                if (isolatedParentId) {
+                    const parentNode = familyData.find(n => n.id === isolatedParentId);
+                    const childrenNodes = familyData.filter(n => n.parentId === isolatedParentId);
+                    if (parentNode) {
+                        const rootCopy = { ...parentNode, parentId: null };
+                        const childrenCopies = childrenNodes.map(c => ({ ...c, parentId: rootCopy.id }));
+                        activeData = [rootCopy, ...childrenCopies];
+                    }
+                }
+                const rootNodes = d3.stratify().id(d => d.id).parentId(d => d.parentId)(activeData);
                 const treeLayoutData = treeLayout(rootNodes);
                 const targetNode = treeLayoutData.descendants().find(n => n.id === data.id);
                 
@@ -633,6 +698,10 @@
 
                 const idsToDelete = getDescendantIds(selectedNodeId);
                 familyData = familyData.filter(n => !idsToDelete.includes(n.id));
+
+                if (isolatedParentId && idsToDelete.includes(isolatedParentId)) {
+                    resetFamilyFilter();
+                }
 
                 selectedNodeId = null;
                 document.getElementById('selected-info').classList.add('hidden');
