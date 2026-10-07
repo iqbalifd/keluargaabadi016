@@ -88,7 +88,7 @@
     <div id="ui-panel" class="fixed z-20 bg-white/85 backdrop-blur-md border-gray-200 shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.1)] md:shadow-2xl transition-transform duration-300 bottom-0 left-0 w-full rounded-t-3xl border-t border-white/60 px-5 pb-5 pt-2 max-h-[65vh] flex flex-col md:bottom-auto md:top-6 md:left-6 md:w-[340px] md:rounded-2xl md:border md:max-h-[90vh] md:pb-6 md:pt-6 md:px-6 md:transform-none">
         
         <!-- Handle Swipe Mobile -->
-        <div id="mobile-handle" class="md:hidden flex justify-center mb-1 py-3 cursor-pointer w-full">
+        <div id="mobile-handle" class="md:hidden flex justify-center mb-1 py-3 cursor-pointer w-full" onclick="toggleMobilePanel()">
             <div class="w-14 h-1.5 bg-gray-300 rounded-full"></div>
         </div>
 
@@ -637,23 +637,17 @@
         async function initCloud() {
             const cloudStatus = document.getElementById('cloud-status');
             try {
-                // GANTI BAGIAN INI DENGAN CONFIG FIREBASE ANDA SEBELUM DI UPLOAD KE GITHUB
-                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-                     apiKey: "AIzaSyBLxKcMg9anSKgGiref3NQDdm9AZWta6xI",
-                     authDomain: "keluargaabadi016.firebaseapp.com",
-                     projectId: "keluargaabadi016",
-                     storageBucket: "keluargaabadi016.firebasestorage.app",
-                     messagingSenderId: "468992400632",
-                     appId: "1:468992400632:web:f70b711736f0c6510c2f0d"
+                // Menggunakan konfigurasi Firebase Anda
+                const firebaseConfig = {
+                    apiKey: "AIzaSyBLxKcMg9anSKgGiref3NQDdm9AZWta6xI",
+                    authDomain: "keluargaabadi016.firebaseapp.com",
+                    projectId: "keluargaabadi016",
+                    storageBucket: "keluargaabadi016.firebasestorage.app",
+                    messagingSenderId: "468992400632",
+                    appId: "1:468992400632:web:f70b711736f0c6510c2f0d"
                 };
 
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-silsilah-id';
-                
-                if (!firebaseConfig || firebaseConfig.apiKey === "AIzaSyBLxKcMg9anSKgGiref3NQDdm9AZWta6xI") {
-                    if(cloudStatus) cloudStatus.textContent = 'Mode Offline (Lokal)';
-                    updateTree(); resetView();
-                    return;
-                }
 
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app); db = getFirestore(app);
@@ -695,3 +689,7 @@
     </script>
 </body>
 </html>
+```
+eof
+
+Konfigurasi Firebase Anda telah berhasil dipasang ke dalam kode program! Sekarang, aplikasi ini sudah tersambung langsung ke proyek `keluargaabadi016` milik Anda. Anda bisa langsung mencoba tombol **Preview** atau menyimpannya untuk di-upload ke GitHub.
