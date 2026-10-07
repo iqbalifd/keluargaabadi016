@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi Silsilah Keluarga Abadi 016</title>
+    <title>Aplikasi Silsilah Keluarga</title>
     <!-- Memuat Tailwind CSS untuk styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Memuat D3.js untuk visualisasi grafik pohon -->
@@ -92,7 +92,7 @@
 
         <div class="overflow-y-auto flex-1" id="panel-content">
             <div class="flex items-center justify-between mb-1 md:mb-2">
-                <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 tracking-tight">Silsilah Keluarga Abadi 016</h1>
+                <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700 tracking-tight">Silsilah</h1>
                 <span id="cloud-status" class="text-[10px] md:text-xs bg-yellow-100/80 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200/50 font-semibold shadow-sm backdrop-blur-sm">⏳ Sedang sync...</span>
             </div>
             <p class="text-sm text-gray-500 mb-4 leading-tight">Peta visual silsilah keluarga besar.</p>
@@ -242,7 +242,7 @@
         let familyData = []; 
         let nextId = 1; 
         let selectedNodeId = null; 
-        let isolatedParentId = null; // ID untuk mode lihat keluarga ini saja di bagan
+        let isolatedParentId = null; // ID untuk mode lihat seluruh keturunan keluarga ini saja di bagan
 
         // --- KONFIGURASI VISUAL D3 ---
         const container = document.getElementById('tree-container');
@@ -309,18 +309,24 @@
             }
 
             try {
-                // Tentukan data yang dirender (Full Tree atau Isolate Family View)
+                // Tentukan data yang dirender (Full Tree atau Isolate Subtree with all descendants)
                 let activeData = familyData;
                 if (isolatedParentId) {
-                    const parentNode = familyData.find(n => n.id === isolatedParentId);
-                    const childrenNodes = familyData.filter(n => n.parentId === isolatedParentId);
-                    if (parentNode) {
-                        // Buat salinan parent dengan parentId = null agar jadi akar di D3
-                        const rootCopy = { ...parentNode, parentId: null };
-                        // Buat salinan anak-anak dengan parentId mengarah ke rootCopy.id
-                        const childrenCopies = childrenNodes.map(c => ({ ...c, parentId: rootCopy.id }));
-                        activeData = [rootCopy, ...childrenCopies];
-                    }
+                    const getSubtreeIds = (parentId, list) => {
+                        let ids = [parentId];
+                        const children = familyData.filter(n => n.parentId === parentId);
+                        for (const child of children) {
+                            ids = ids.concat(getSubtreeIds(child.id, familyData));
+                        }
+                        return ids;
+                    };
+                    const validIds = getSubtreeIds(isolatedParentId, familyData);
+                    activeData = familyData.filter(n => validIds.includes(n.id)).map(n => {
+                        if (n.id === isolatedParentId) {
+                            return { ...n, parentId: null }; // Jadikan akar pada tampilan terisolasi
+                        }
+                        return { ...n };
+                    });
                 }
 
                 const root = d3.stratify().id(d => d.id).parentId(d => d.parentId)(activeData);
@@ -377,7 +383,7 @@
                     let details = [];
                     const childNumLabel = getChildIndexLabel(d.data);
                     if (childNumLabel) details.push(childNumLabel);
-                    if (d.data.mainAlm) details.push("Almarhum(ah)");
+                    if (d.data.mainAlm) details.push("alm.");
                     if (d.data.birthYear) details.push(d.data.birthYear);
 
                     group.append("text")
@@ -415,7 +421,7 @@
                             .text(d.data.spouseName || "");
 
                         let spouseDetails = [];
-                        if (d.data.spouseAlm) spouseDetails.push("Almarhum(ah)");
+                        if (d.data.spouseAlm) spouseDetails.push("alm.");
                         if (d.data.spouseBirthYear) spouseDetails.push(d.data.spouseBirthYear);
 
                         group.append("text")
@@ -431,7 +437,7 @@
             }
         }
 
-        // --- FITUR ISOLASI KELUARGA (LIHAT KELUARGA INI SAJA DI BAGAN) ---
+        // --- FITUR ISOLASI KELUARGA & SELURUH KETURUNANNYA ---
         window.isolateFamilyView = function() {
             if (!selectedNodeId) return;
             const node = familyData.find(n => n.id === selectedNodeId);
@@ -439,11 +445,11 @@
 
             isolatedParentId = node.id;
             document.getElementById('filter-banner').classList.remove('hidden');
-            document.getElementById('filter-banner-text').textContent = `Keluarga ${node.name}`;
+            document.getElementById('filter-banner-text').textContent = `Keluarga ${node.name} & Keturunannya`;
             
             updateTree();
             resetView();
-            showToast(`Menampilkan keluarga ${node.name} di bagan`);
+            showToast(`Menampilkan keluarga ${node.name} beserta seluruh keturunannya`);
         };
 
         window.resetFamilyFilter = function() {
@@ -489,10 +495,6 @@
         window.focusNode = function(id) {
             const nodeData = familyData.find(n => n.id === id);
             if (nodeData) {
-                // Jika sedang di mode filter dan node di luar filter, reset filter dulu
-                if (isolatedParentId && nodeData.parentId !== isolatedParentId && nodeData.id !== isolatedParentId) {
-                    resetFamilyFilter();
-                }
                 selectNode(nodeData);
                 document.getElementById('search-results').classList.add('hidden');
                 document.getElementById('search-input').value = '';
@@ -575,7 +577,7 @@
             let mainTxt = data.name;
             const childNum = getChildIndexLabel(data);
             if (childNum) mainTxt += ` (${childNum})`;
-            if (data.mainAlm) mainTxt += " • Almarhum(ah)";
+            if (data.mainAlm) mainTxt += " • alm.";
             
             document.getElementById('info-name').textContent = mainTxt;
             document.getElementById('info-detail').textContent = data.birthYear ? `Tahun Lahir: ${data.birthYear}` : 'Tahun lahir tidak diketahui';
@@ -584,7 +586,7 @@
             if (data.spouseName) {
                 spouseBox.style.display = 'block';
                 let spouseTxt = data.spouseName;
-                if(data.spouseAlm) spouseTxt += " • Almarhum(ah)";
+                if(data.spouseAlm) spouseTxt += " • alm.";
                 document.getElementById('info-spouse-name').textContent = spouseTxt;
                 document.getElementById('info-spouse-detail').textContent = data.spouseBirthYear ? `Tahun Lahir: ${data.spouseBirthYear}` : 'Tahun lahir tidak diketahui';
             } else {
@@ -594,16 +596,19 @@
             toggleMobilePanel(true);
 
             try {
-                // Tentukan root berdasarkan mode aktif saat ini
                 let activeData = familyData;
                 if (isolatedParentId) {
-                    const parentNode = familyData.find(n => n.id === isolatedParentId);
-                    const childrenNodes = familyData.filter(n => n.parentId === isolatedParentId);
-                    if (parentNode) {
-                        const rootCopy = { ...parentNode, parentId: null };
-                        const childrenCopies = childrenNodes.map(c => ({ ...c, parentId: rootCopy.id }));
-                        activeData = [rootCopy, ...childrenCopies];
-                    }
+                    const getSubtreeIds = (parentId) => {
+                        let ids = [parentId];
+                        const children = familyData.filter(n => n.parentId === parentId);
+                        for (const child of children) ids = ids.concat(getSubtreeIds(child.id));
+                        return ids;
+                    };
+                    const validIds = getSubtreeIds(isolatedParentId);
+                    activeData = familyData.filter(n => validIds.includes(n.id)).map(n => {
+                        if (n.id === isolatedParentId) return { ...n, parentId: null };
+                        return { ...n };
+                    });
                 }
                 const rootNodes = d3.stratify().id(d => d.id).parentId(d => d.parentId)(activeData);
                 const treeLayoutData = treeLayout(rootNodes);
